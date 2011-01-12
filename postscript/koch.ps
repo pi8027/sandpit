@@ -1,0 +1,28 @@
+%!PS-Adobe-2.0 EPSF-2.0
+
+/nextpos {
+	3 index 2 index add 2 div
+	3 index 2 index sub 12 sqrt div sub
+	4 index 3 index sub 12 sqrt div
+	4 index 3 index add 2 div add
+	mark 7 3 roll cleartomark
+} def
+
+/kochrec {
+	1 index 0 eq {
+		pop pop lineto pop pop
+	} {
+		6 copy exch pop { 4 2 roll } if nextpos
+		7 index 7 index 3 index 3 index 7 index 1 sub 7 index not kochrec
+		5 index 5 index 5 index 1 sub 5 index not kochrec
+		mark 7 1 roll cleartomark
+	} ifelse
+} def
+
+/koch {
+	4 index 4 index moveto
+	true kochrec
+	stroke
+} def
+
+100 100 600 600 12 koch

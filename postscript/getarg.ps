@@ -1,0 +1,15 @@
+%!PS-Adobe-3.0
+
+/getarg {
+	/names exch def
+	/n names length 1 sub def
+	0 1 n {
+		/m exch def
+		names n m sub get exch def
+	} for
+} def
+
+/hoge {
+	[/a /b /c] getarg
+	c =
+} def
