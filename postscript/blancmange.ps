@@ -1,0 +1,41 @@
+
+/compl { % act list <compl> list'
+    [
+        2 index
+        2 index 0 get
+        3 index dup length 1 sub 1 exch getinterval { % act a b
+            1 index 1 index 4 index exec % act a b (a b act)
+            4 3 roll 3 2 roll % a (a b act) act b
+        } forall
+        exch pop
+    ]
+    exch pop exch pop
+} def
+
+/gen { % list x <gen> list'
+    dup 1 eq
+    {
+        pop
+    } { % list x
+        [1 index /add cvx /add cvx 2 /idiv cvx] cvx % list x act
+        3 2 roll % x act list
+        compl % x list'
+        exch 2 idiv % list' x'
+        gen % list''
+    } ifelse
+} def
+
+/blancmange { % x y z n <blancmange> -
+    [0 0] 1 2 index bitshift gen % x y z n result
+    4 index 4 index moveto
+    0 1 1 4 index bitshift { % x y z n result m
+        dup 4 index mul 6 index add exch % x y z n result x' m
+        2 index exch get 4 index mul 5 index add % x y z n result x' y'
+        lineto % x y z n result
+    } for
+    5 { pop } repeat
+    stroke
+} def
+
+50 50 0.5 10 blancmange
+
