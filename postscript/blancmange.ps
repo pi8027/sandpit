@@ -12,30 +12,27 @@
     exch pop exch pop
 } def
 
-/gen { % list x <gen> list'
-    dup 1 eq
-    {
+/gen { % list n <gen> list'
+    dup 0 eq {
         pop
-    } { % list x
-        [1 index /add cvx /add cvx 2 /idiv cvx] cvx % list x act
-        3 2 roll % x act list
-        compl % x list'
-        exch 2 idiv % list' x'
-        gen % list''
+    } { % list n
+        [1 2 index bitshift /add cvx /add cvx 2 /idiv cvx] cvx % list n act
+        3 2 roll % n act list
+        compl % n list'
+        exch 1 sub gen % list''
     } ifelse
 } def
 
 /blancmange { % x y z n <blancmange> -
-    [0 0] 1 2 index bitshift gen % x y z n result
-    4 index 4 index moveto
+    dup [0 0] exch gen % x y z n result
+    4 index 4 index moveto % x y z n result
     0 1 1 4 index bitshift { % x y z n result m
         dup 4 index mul 6 index add exch % x y z n result x' m
         2 index exch get 4 index mul 5 index add % x y z n result x' y'
         lineto % x y z n result
     } for
     5 { pop } repeat
-    stroke
 } def
 
-50 50 0.5 10 blancmange
+50 50 1 9 blancmange stroke
 
