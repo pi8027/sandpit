@@ -1,0 +1,41 @@
+
+(sconv.ps) run
+
+/compl { % act list <compl> list'
+    [
+        [/act /list /mark] [/act /list /mark /act /list] sconv 0 get
+        [/act /list /mark /act /head]
+            [/act /list /mark /act /head /list /list] sconv
+        length 1 sub 1 exch getinterval { % act a b
+            [/act /a /b] [/act /a /b /a /b /act] sconv exec
+            [/act /a /b /r] [/a /r /act /b] sconv
+        } forall
+        [/act /a] [/a] sconv
+    ]
+    [/act /list /list'] [/list'] sconv
+} bind def
+
+/gen { % list n <gen> list'
+    dup 0 eq {
+        pop
+    } { % list n
+        [1 2 index bitshift /add cvx /add cvx 2 /idiv cvx] cvx
+        [/list /n /act] [/n /act /list] sconv
+        compl exch 1 sub gen
+    } ifelse
+} bind def
+
+/blancmange { % x y z n <blancmange> -
+    [0 0] 1 index gen
+    [/x /y /z /n /result] [/x /y /z /n /result /x /y] sconv moveto
+    0 1 1 4 index bitshift {
+        [/x /y /z /n /result /m] [/x /y /z /n /result /m /x /m /z] sconv
+            mul add
+        [/y /z /n /result /m /x'] [/y /z /n /result /x' /y /z /result /m] sconv
+            get mul add lineto
+    } for
+    [/x /y /z /n /result] [] sconv
+} bind def
+
+50 50 1 9 blancmange stroke
+

@@ -1,0 +1,143 @@
+
+/getsafe { % array int <getsafe> val true
+           % array int <getsafe> false
+    dup 2 index length lt {
+        get true
+    }
+    {
+        pop pop false
+    } ifelse
+} bind def
+
+/head { % array <head> val
+    0 get
+} bind def
+
+/headsafe { % array <headsafe> val true
+            % array <headsafe> false
+    0 getsafe
+} bind def
+
+/tail { % array <tail> subarray
+    1 1 index length 1 sub getinterval
+} bind def
+
+/tailsafe { % array <tailsafe> subarray true
+            % array <tailsafe> false
+    dup length 0 ne {
+        tail true
+    }
+    {
+        false
+    } ifelse
+} bind def
+
+/uncons { % array <uncons> head tail
+    dup head exch tail
+} bind def
+
+/unconssafe { % array <unconssafe> head tail true
+              % array <unconssafe> false
+    dup length 0 ne {
+        uncons true
+    }
+    {
+        pop false
+    } ifelse
+} bind def
+
+/element { % val array <element> bool
+    unconssafe {
+        exch 2 index eq {
+            pop pop true
+        }
+        {
+            element
+        } ifelse
+    }
+    {
+        pop false
+    } ifelse
+} bind def
+
+/asearch { % val array <asearch> int true
+           % val array <asearch> false
+    /asearch_ {
+        1 index 1 index getsafe {
+            3 index eq {
+                3 1 roll pop pop true
+            }
+            {
+                1 add asearch_
+            } ifelse
+        }
+        {
+            false
+        } ifelse
+    } bind def
+    0 asearch_
+} bind def
+
+/split { % array int <split> array1 array2
+    1 index 0 2 index getinterval % array int array1
+    3 1 roll % array1 array int
+    1 index length 1 index sub getinterval % array1 array2
+} bind def
+
+/stack_conv_gen { % from to <stack_conv_gen> op1 op2 ...
+    dup length 0 eq { % from to
+        pop { pop /pop cvx } forall true
+    }
+    { % from to
+        
+        1 index headsafe {
+            1 index headsafe {
+                eq
+            }
+            {
+                false
+            } ifelse
+        }
+        {
+            false
+        } ifelse
+        { % from to
+            dup head 2 index tail element % from to b1
+            1 index head 2 index tail element not % from to b1 b2
+            or {
+                exch tail exch tail stack_conv_gen
+            }
+            {
+                1 index length 1 sub /index cvx % from to num /index
+                4 2 roll % num /index from to
+                exch [ exch uncons { exch } forall ] % num /index to from'
+                exch tail stack_conv_gen
+            } ifelse
+        }
+        { % from to
+            dup head 2 index asearch {
+                2 index exch split % from to left right
+                3 index length 1 index length /roll cvx 7 3 roll 4 3 roll pop
+                    % n m roll to left right
+                [ 3 1 roll { exch } forall {} forall ] exch stack_conv_gen
+            }
+            {
+                pop pop false
+            } ifelse
+        } ifelse
+    } ifelse
+} bind def
+
+/stack_conv { % from to <stack_conv> array
+    [ 3 1 roll stack_conv_gen {
+        ] cvx true
+    }
+    {
+        ] pop false
+    } ifelse
+} bind def
+
+/sconv {
+    stack_conv { exec } if
+} bind def
+
