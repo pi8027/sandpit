@@ -9,7 +9,3 @@ data List (A : Set) : Set where
     []   : List A
     _::_ : A -> List A -> List A
 
-length : forall { A } -> List A -> Nat
-length [] = zero
-length (x :: xs) = succ (length xs)
-

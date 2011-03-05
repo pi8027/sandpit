@@ -1,11 +1,11 @@
 
 module Ord where
 
-open import Bool
+Relation : Set -> Set -> Set1
+Relation A B = A -> B -> Set
 
-record OrderRelation (A : Set) : Set where
-    field f     : A -> A -> Bool
-          refl  : (a : A) -> isTrue (f a a)
-          trans : (a b c : A) ->
-                      isTrue (f a b) -> isTrue (f b c) -> isTrue (f a c)
+record OrderRelation (A : Set) (f : Relation A A) : Set where
+    field
+        refl : (i : A) -> f i i
+        trans : (a b c : A) -> f a b -> f b c -> f a c
 
