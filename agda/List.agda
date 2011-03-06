@@ -32,10 +32,6 @@ ListOrder {A} f elemorder = record { refl = listRefl ; trans = listTrans } where
     listRefl [] = nullIsMinimal {l = []}
     listRefl (x :: xs) = liftCons (elemrefl x) (elemrefl x) (listRefl xs)
 
-    postulate
-        listTrans' : (a b c : List A) ->
-            CompareList A f a b -> CompareList A f b c -> CompareList A f a c
-
     listTrans : (a b c : List A) ->
         CompareList A f a b -> CompareList A f b c -> CompareList A f a c
     listTrans [] b c _ _ = nullIsMinimal {l = c}
@@ -43,9 +39,18 @@ ListOrder {A} f elemorder = record { refl = listRefl ; trans = listTrans } where
     listTrans a (b :: bs) [] p1 ()
     listTrans (a :: as) (b :: bs) (c :: cs)
         (liftCons p1 p2 p3) (liftCons p4 p5 p6) =
-            liftCons (elemtrans a b c p1 p4) (elemtrans c b a p5 p2)
-                (listTrans as bs cs p3 p6)
---    listTrans (a :: as) (b :: bs) (c :: cs)
---        (headCompare p1 p2) (headCompare p3 p4) =
-    listTrans a b c p1 p2 = listTrans' a b c p1 p2
+        liftCons (elemtrans a b c p1 p4) (elemtrans c b a p5 p2)
+            (listTrans as bs cs p3 p6)
+    listTrans (a :: as) (b :: bs) (c :: cs)
+        (headCompare p1 p2) (headCompare p3 p4) =
+        headCompare (elemtrans a b c p1 p3) p5 where
+        postulate p5 : f c a -> False
+    listTrans (a :: as) (b :: bs) (c :: cs)
+        (liftCons p1 p2 p3) (headCompare p4 p5) =
+        headCompare (elemtrans a b c p1 p4) p6 where
+        postulate p6 : f c a -> False
+    listTrans (a :: as) (b :: bs) (c :: cs)
+        (headCompare p1 p2) (liftCons p3 p4 p5) =
+        headCompare (elemtrans a b c p1 p3) p6 where
+        postulate p6 : f c a -> False
 
