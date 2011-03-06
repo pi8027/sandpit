@@ -22,14 +22,18 @@ ListOrder : {A : Set} ->
     OrderRelation A f ->
     OrderRelation (List A) (CompareList A f)
 ListOrder {A} f elemorder = record { refl = listRefl ; trans = listTrans } where
+    elemrefl : (i : A) -> f i i
+    elemrefl = OrderRelation.refl elemorder
+
+    elemtrans : (a b c : A) -> f a b -> f b c -> f a c
+    elemtrans = OrderRelation.trans elemorder
+
     listRefl : (l : List A) -> CompareList A f l l
     listRefl [] = nullIsMinimal {l = []}
-    listRefl (x :: xs) = liftCons
-        (OrderRelation.refl elemorder x) (OrderRelation.refl elemorder x)
-        (listRefl xs)
+    listRefl (x :: xs) = liftCons (elemrefl x) (elemrefl x) (listRefl xs)
 
     postulate
-        listTrans_ : (a b c : List A) ->
+        listTrans' : (a b c : List A) ->
             CompareList A f a b -> CompareList A f b c -> CompareList A f a c
 
     listTrans : (a b c : List A) ->
@@ -37,5 +41,11 @@ ListOrder {A} f elemorder = record { refl = listRefl ; trans = listTrans } where
     listTrans [] b c _ _ = nullIsMinimal {l = c}
     listTrans (a :: as) [] c () p2
     listTrans a (b :: bs) [] p1 ()
-    listTrans a b c p1 p2 = listTrans_ a b c p1 p2
+    listTrans (a :: as) (b :: bs) (c :: cs)
+        (liftCons p1 p2 p3) (liftCons p4 p5 p6) =
+            liftCons (elemtrans a b c p1 p4) (elemtrans c b a p5 p2)
+                (listTrans as bs cs p3 p6)
+--    listTrans (a :: as) (b :: bs) (c :: cs)
+--        (headCompare p1 p2) (headCompare p3 p4) =
+    listTrans a b c p1 p2 = listTrans' a b c p1 p2
 
