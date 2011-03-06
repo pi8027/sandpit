@@ -43,14 +43,11 @@ ListOrder {A} f elemorder = record { refl = listRefl ; trans = listTrans } where
             (listTrans as bs cs p3 p6)
     listTrans (a :: as) (b :: bs) (c :: cs)
         (headCompare p1 p2) (headCompare p3 p4) =
-        headCompare (elemtrans a b c p1 p3) p5 where
-        postulate p5 : f c a -> False
+        headCompare (elemtrans a b c p1 p3) (\p -> p4 (elemtrans c a b p p1))
     listTrans (a :: as) (b :: bs) (c :: cs)
         (liftCons p1 p2 p3) (headCompare p4 p5) =
-        headCompare (elemtrans a b c p1 p4) p6 where
-        postulate p6 : f c a -> False
+        headCompare (elemtrans a b c p1 p4) (\p -> p5 (elemtrans c a b p p1))
     listTrans (a :: as) (b :: bs) (c :: cs)
         (headCompare p1 p2) (liftCons p3 p4 p5) =
-        headCompare (elemtrans a b c p1 p3) p6 where
-        postulate p6 : f c a -> False
+        headCompare (elemtrans a b c p1 p3) (\p -> p2 (elemtrans b c a p3 p))
 
