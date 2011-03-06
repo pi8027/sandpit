@@ -9,3 +9,5 @@ record OrderRelation (A : Set) (f : Relation A A) : Set where
         refl : (i : A) -> f i i
         trans : (a b c : A) -> f a b -> f b c -> f a c
 
+data False : Set where
+

@@ -8,8 +8,8 @@ data Nat : Set where
     succ : Nat -> Nat
 
 data _<=_ : Relation Nat Nat where
-    zeroIsMinimal : forall { n } -> zero <= n
-    liftSuccessor : forall { m n } (p : m <= n) -> succ m <= succ n
+    zeroIsMinimal : forall {n} -> zero <= n
+    liftSuccessor : forall {m n} (p : m <= n) -> succ m <= succ n
 
 NatOrder : OrderRelation Nat _<=_
 NatOrder = record { refl = natRefl ; trans = natTrans } where
