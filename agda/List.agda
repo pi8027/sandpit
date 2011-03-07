@@ -9,47 +9,60 @@ data List (A : Set) : Set where
     []   : List A
     _::_ : A -> List A -> List A
 
-data CompareList (A : Set) (Co : Relation A A) :
+data CompareList {A : Set} (Co : Relation A A) :
         Relation (List A) (List A) where
-    nullIsMinimal : forall {l} -> CompareList A Co [] l
-    liftCons : forall {x y xs ys} -> Co x y -> Co y x ->
-        CompareList A Co xs ys -> CompareList A Co (x :: xs) (y :: ys)
-    headCompare : forall {x y : A}{xs ys : List A} ->
-        Co x y -> (Co y x -> False) -> CompareList A Co (x :: xs) (y :: ys)
+    nullIsMinimal : forall {l} -> CompareList Co [] l
+    consOrder : forall {x y xs ys} ->
+        Co x y -> ((Co y x -> False) \/ CompareList Co xs ys) ->
+        CompareList Co (x :: xs) (y :: ys)
 
 ListOrder : {A : Set} ->
-    (f : Relation A A) ->
-    OrderRelation A f ->
-    OrderRelation (List A) (CompareList A f)
+    (f : Relation A A) -> OrderRelation f -> OrderRelation (CompareList f)
 ListOrder {A} f elemorder = record { refl = listRefl ; trans = listTrans } where
-    elemrefl : (i : A) -> f i i
-    elemrefl = OrderRelation.refl elemorder
-
-    elemtrans : (a b c : A) -> f a b -> f b c -> f a c
+    elemtrans : {a b c : A} -> f a b -> f b c -> f a c
     elemtrans = OrderRelation.trans elemorder
 
-    getHeadRelation : forall {A f x y xs ys} ->
-        CompareList A f (x :: xs) (y :: ys) -> f x y
-    getHeadRelation (liftCons p _ _) = p
-    getHeadRelation (headCompare p _) = p
+    listRefl : forall {l} -> CompareList f l l
+    listRefl {[]} = nullIsMinimal {l = []}
+    listRefl {x :: xs} =
+        consOrder (OrderRelation.refl elemorder) (orRight listRefl)
 
-    listRefl : (l : List A) -> CompareList A f l l
-    listRefl [] = nullIsMinimal {l = []}
-    listRefl (x :: xs) = liftCons (elemrefl x) (elemrefl x) (listRefl xs)
+    listTrans : forall {a b c} ->
+        CompareList f a b -> CompareList f b c -> CompareList f a c
+    listTrans {a = []} _ _ = nullIsMinimal
+    listTrans {a = _ :: _} {b = []} () p2
+    listTrans {b = _ :: _} {c = []} p1 ()
+    listTrans (consOrder p1 (orLeft p2)) (consOrder p3 _) =
+        consOrder (elemtrans p1 p3) (orLeft (\p -> p2 (elemtrans p3 p)))
+    listTrans (consOrder p1 _) (consOrder p2 (orLeft p3)) =
+        consOrder (elemtrans p1 p2) (orLeft (\p -> p3 (elemtrans p p1)))
+    listTrans (consOrder p1 (orRight p2)) (consOrder p3 (orRight p4)) =
+        consOrder (elemtrans p1 p3) (orRight (listTrans p2 p4))
 
-    listTrans : (a b c : List A) ->
-        CompareList A f a b -> CompareList A f b c -> CompareList A f a c
-    listTrans [] b c _ _ = nullIsMinimal {l = c}
-    listTrans (a :: as) [] c () p2
-    listTrans a (b :: bs) [] p1 ()
-    listTrans (a :: as) (b :: bs) (c :: cs)
-        (liftCons p1 p2 p3) (liftCons p4 p5 p6) =
-        liftCons (elemtrans a b c p1 p4) (elemtrans c b a p5 p2)
-            (listTrans as bs cs p3 p6)
-    listTrans (a :: as) (b :: bs) (c :: cs) (headCompare p1 p2) p3 =
-        headCompare (elemtrans a b c p1 (getHeadRelation p3))
-            (\p -> p2 (elemtrans b c a (getHeadRelation p3) p))
-    listTrans (a :: as) (b :: bs) (c :: cs) p1 (headCompare p2 p3) =
-        headCompare (elemtrans a b c (getHeadRelation p1) p2)
-            (\p -> p3 (elemtrans c a b p (getHeadRelation p1)))
+--data CompareList {A : Set} (Co : Relation A A) :
+--        Relation (List A) (List A) where
+--    nullIsMinimal : forall {l} -> CompareList Co [] l
+--    consOrder : forall {x y xs ys} ->
+--        SeqOrder Co (CompareList Co) x xs y ys ->
+--        CompareList Co (x :: xs) (y :: ys)
+--
+--ListOrder : {A : Set} ->
+--    (f : Relation A A) -> OrderRelation f -> OrderRelation (CompareList f)
+--ListOrder {A} f elemorder = listorder where
+--    mutual
+--        listorder : OrderRelation (CompareList f)
+--        listorder = record { refl = listRefl ; trans = listTrans }
+--
+--        listRefl : forall {l} -> CompareList f l l
+--        listRefl {[]} = nullIsMinimal {l = []}
+--        listRefl {x :: xs} = consOrder
+--            (seqOrder (OrderRelation.refl elemorder) (orRight listRefl))
+--
+--        listTrans : forall {a b c} ->
+--            CompareList f a b -> CompareList f b c -> CompareList f a c
+--        listTrans {a = []} _ _ = nullIsMinimal
+--        listTrans {a = _ :: _} {b = []} () p2
+--        listTrans {b = _ :: _} {c = []} p1 ()
+--        listTrans (consOrder p1) (consOrder p2) =
+--            consOrder (seqOrderTrans elemorder listorder p1 p2)
 
