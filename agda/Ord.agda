@@ -8,7 +8,7 @@ Relation A B = A -> B -> Set
 
 data Order {A : Set} (op : Relation A A) : Relation A A where
     leq : {x y : A} -> op x y -> Order op x y
-    gt : {x y : A} -> op y x -> (op x y -> False) -> Order op x y
+    gt : {x y : A} -> (op x y -> False) -> Order op x y
 
 record OrderLaws {A : Set} (op : Relation A A) : Set where
     field

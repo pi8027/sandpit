@@ -17,6 +17,29 @@ data CompareList {A : Set} (op : Relation A A) : Relation [ A ] [ A ] where
         op x y -> ((op y x -> False) \/ CompareList op xs ys) ->
         CompareList op (x :: xs) (y :: ys)
 
+unconsOrder : forall {A : Set}{op : Relation A A}{x xs y ys} ->
+    CompareList op (x :: xs) (y :: ys) ->
+    op x y /\ ((op y x -> False) \/ CompareList op xs ys)
+unconsOrder (consOrder a b) = record {l = a ; r = b}
+
+ListOrder : {A : Set}{op : Relation A A} ->
+    ((x y : A) -> Order op x y) ->
+    (xs ys : [ A ]) -> Order (CompareList op) xs ys
+ListOrder elemorder [] _ = leq nullIsMinimal
+ListOrder {op = op} elemorder (x :: xs) [] = gt f where
+    f : CompareList op (x :: xs) [] -> False
+    f ()
+ListOrder {op = op} elemorder (x :: xs) (y :: ys) with elemorder x y
+... | gt !x<=y = gt $ !x<=y ○ _/\_.l ○ unconsOrder
+... | leq x<=y with elemorder y x
+... | gt !y<=x = leq $ consOrder x<=y $ orLeft !y<=x
+... | leq y<=x with ListOrder elemorder xs ys
+... | leq xs<=ys = leq $ consOrder x<=y $ orRight xs<=ys
+... | gt !xs<=ys = gt f where
+    f : CompareList op (x :: xs) (y :: ys) -> False
+    f (consOrder _ (orLeft !y<=x)) = !y<=x y<=x
+    f (consOrder _ (orRight xs<=ys)) = !xs<=ys xs<=ys
+
 ListOrderLaws : {A : Set} ->
     (op : Relation A A) -> OrderLaws op -> OrderLaws (CompareList op)
 ListOrderLaws {A} op elemlaw =
@@ -25,7 +48,7 @@ ListOrderLaws {A} op elemlaw =
     elemtrans = OrderLaws.trans elemlaw
 
     listRefl : forall {l} -> CompareList op l l
-    listRefl {[]} = nullIsMinimal {l = []}
+    listRefl {[]} = nullIsMinimal
     listRefl {x :: xs} =
         consOrder (OrderLaws.refl elemlaw) (orRight listRefl)
 

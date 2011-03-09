@@ -16,14 +16,14 @@ data _<=_ : Relation Nat Nat where
 unliftSuccessor : forall {m n} -> succ m <= succ n -> m <= n
 unliftSuccessor (liftSuccessor rel) = rel
 
-NatOrder : (x : Nat) -> (y : Nat) -> Order _<=_ x y
+NatOrder : (x y : Nat) -> Order _<=_ x y
 NatOrder zero _ = leq zeroIsMinimal
-NatOrder (succ x) zero = gt zeroIsMinimal f where
+NatOrder (succ x) zero = gt f where
     f : succ x <= zero -> False
     f ()
 NatOrder (succ x) (succ y) with NatOrder x y
 ... | leq x<=y = leq $ liftSuccessor x<=y
-... | gt y<=x !x<=y = gt (liftSuccessor y<=x) (!x<=y ○ unliftSuccessor)
+... | gt !x<=y = gt $ !x<=y ○ unliftSuccessor
 
 NatOrderLaws : OrderLaws _<=_
 NatOrderLaws = record { refl = natRefl ; trans = natTrans } where
