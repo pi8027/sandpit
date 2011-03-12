@@ -2,6 +2,7 @@
 module Relation where
 
 open import Logic
+open import Function
 
 Relation : Set -> Set -> Set1
 Relation A B = A -> B -> Set
@@ -17,10 +18,15 @@ record Order {A : Set} (op : RelationOn A) : Set where
 record TotalOrder {A : Set} (op : RelationOn A) : Set where
     field
         base  : Order op
-        total : forall {a b} -> op a b \/ op b a
+        total : forall {a b} -> op a b ∨ op b a
 
 record DecidableOrder {A : Set} (op : RelationOn A) : Set where
     field
         base   : TotalOrder op
-        decide : (a b : A) -> op a b \/ (op a b -> False)
+        decide : (a b : A) -> op a b ∨ (op a b -> False)
 
+trichotomy : {A : Set}{op : RelationOn A}{a b : A} ->
+    TotalOrder op -> (op b a -> False) -> op a b
+trichotomy {A} {op} {a} {b} ord !b<=a with TotalOrder.total ord {a} {b}
+... | orLeft a<=b = a<=b
+... | orRight b<=a = False-elim $ !b<=a b<=a

@@ -7,6 +7,7 @@ open import Logic
 open import Function
 open import Relation
 open import List
+open import OList
 
 caseord : {A B : Set}{op : RelationOn A} ->
     DecidableOrder op -> (x y : A) ->
