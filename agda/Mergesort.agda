@@ -26,3 +26,15 @@ merge order (x :: xs) (y :: ys) =
 -- ... | orLeft _  = x :: merge order xs (y :: ys)
 -- ... | orRight _ = y :: merge order (x :: xs) ys
 
+
+
+omerge : {A : Set}{op : RelationOn A}{b : A} ->
+    (order : DecidableOrder op) ->
+    OList order b -> OList order b -> OList order b
+omerge order [#] l = l
+omerge order l [#] = l
+omerge order (x :# xr #: xs) (y :# yr #: ys) =
+    caseord order x y
+        (\ x<=y -> x :# xr #: omerge order xs (y :# x<=y #: ys))
+        (\ !x<=y -> y :# yr #: omerge order (x :# trichotomy (DecidableOrder.base order) !x<=y #: xs) ys)
+
