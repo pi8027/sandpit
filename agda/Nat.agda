@@ -9,6 +9,10 @@ data Nat : Set where
     zero : Nat
     succ : Nat -> Nat
 
+data NatEq : Nat -> Nat -> Set where
+    eqZero : NatEq zero zero
+    eqSucc : forall {m n} -> NatEq m n -> NatEq (succ m) (succ n)
+
 data _<=_ : RelationOn Nat where
     zeroIsMinimal : forall {n} -> zero <= n
     liftSucc : forall {m n} -> (p : m <= n) -> succ m <= succ n
@@ -45,4 +49,25 @@ unliftSucc (liftSucc rel) = rel
         f ()
     <=decide (succ a) (succ b) =
         orMap liftSucc (flip _∘_ unliftSucc) $ <=decide a b
+_+_ : Nat -> Nat -> Nat
+zero + b = b
+succ a + b = succ $ a + b
 
+natEqRefl : forall {i} -> NatEq i i
+natEqRefl {zero} = eqZero
+natEqRefl {succ a} = eqSucc $ natEqRefl {a}
+
+natEqTrans : forall {a b c} -> NatEq a b -> NatEq b c -> NatEq a c
+natEqTrans eqZero eqZero = eqZero
+natEqTrans (eqSucc a) (eqSucc b) = eqSucc $ natEqTrans a b
+
+natEqSym : forall {a b} -> NatEq a b -> NatEq b a
+natEqSym eqZero = eqZero
+natEqSym (eqSucc r) = eqSucc $ natEqSym r
+
+succAREq : forall {a b} -> NatEq (succ (a + b)) (a + succ b)
+succAREq {zero} {b} = eqSucc natEqRefl
+succAREq {succ a} {b} = eqSucc $ succAREq {a} {b}
+
+succAREq' : forall {a b} -> NatEq (a + succ b) (succ (a + b))
+succAREq' {a} {b} = natEqSym $ succAREq {a} {b}
