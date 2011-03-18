@@ -1,5 +1,5 @@
 
-{-# OPTIONS --termination-depth=10 #-}
+{-# OPTIONS --termination-depth=15 #-}
 
 module Mergesort where
 
@@ -24,19 +24,26 @@ merge order (x :: xs) (y :: ys) =
         (const (x :: merge order xs (y :: ys)))
         (const (y :: merge order (x :: xs) ys))
 
-omerge : {A : Set}{op : RelationOn A}{b : A} ->
-         (order : DecidableOrder op) ->
-         (xs ys : OList order b) -> OList order b
-omerge {A} {op} {b} order l1 l2
-        with OList.l l1 | OList.o l1 | OList.l l2 | OList.o l2
-... | [] | _ | l | o = record {l = l ; o = o}
-... | l | o | [] | _ = record {l = l ; o = o}
-... | (x :: xs) | orderedCons .x p1 p2 | (y :: ys) | orderedCons .y p3 p4 =
+ordmerge : {A : Set}{op : RelationOn A}{b : A}{len : Nat} ->
+         (order : DecidableOrder op) -> (xs ys : OList order b) ->
+         {eq : NatEq len (length (OList.l xs) + length (OList.l ys))} ->
+         OList order b
+ordmerge {A} {op} {b} {len} order l1 l2 {eq}
+        with len | OList.l l1 | OList.o l1 | OList.l l2 | OList.o l2 | eq
+... | zero | [] | _ | [] | _ | eqZero = record {l = [] ; o = orderedNull}
+... | zero | _ :: _ | _ | _ | _ | ()
+... | zero | [] | _ | _ :: _ | _ | ()
+... | succ _ | [] | _ | [] | _ | ()
+... | succ len' | [] | _ | l | o | _ = record {l = l ; o = o}
+... | succ len' | l | o | [] | _ | _ = record {l = l ; o = o}
+... | succ len' | x :: xs | orderedCons .x p1 p2 | y :: ys | orderedCons .y p3 p4 | eqSucc eq' =
     caseord order x y
-    (\ x<=y -> x :# p1 #: omerge order
-        record {l = xs ; o = p2}
-        record {l = y :: ys ; o = orderedCons y x<=y p4})
-    (\ !x<=y -> y :# p3 #: omerge order
-        record {l = x :: xs ; o = orderedCons x (trichotomy' order !x<=y) p2}
-        record {l = ys ; o = p4})
+        (\ x<=y -> x :# p1 #: ordmerge {len = len'} order
+            record {l = xs ; o = p2}
+            record {l = y :: ys ; o = orderedCons y x<=y p4}
+            {eq'})
+        (\ !x<=y -> y :# p3 #: ordmerge {len = len'} order
+            record {l = x :: xs ; o = orderedCons x (trichotomy' order !x<=y) p2}
+            record {l = ys ; o = p4}
+            {natEqTrans eq' (succAREq' {length xs} {length ys})})
 

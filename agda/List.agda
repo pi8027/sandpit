@@ -96,4 +96,3 @@ ListDecidableOrder {A} op elemord =
 length : {A : Set} -> [ A ] -> Nat
 length [] = zero
 length (_ :: xs) = succ $ length xs
-
