@@ -4,6 +4,7 @@ module List where
 open import Function
 open import Logic
 open import Relation
+open import Nat
 
 infixr 40 _::_
 
@@ -14,16 +15,16 @@ data [_] (A : Set) : Set where
 data LeqList {A : Set} (op : RelationOn A) : RelationOn [ A ] where
     nullIsMinimal : forall {l} -> LeqList op [] l
     consOrder : forall {x y xs ys} ->
-        op x y -> ((op y x -> False) ∨ LeqList op xs ys) ->
-        LeqList op (x :: xs) (y :: ys)
+                op x y -> ((¬ op y x) ∨ LeqList op xs ys)  ->
+                LeqList op (x :: xs) (y :: ys)
 
 unconsOrder : forall {A : Set}{op : RelationOn A}{x xs y ys} ->
-    LeqList op (x :: xs) (y :: ys) ->
-    op x y ∧ ((op y x -> False) ∨ LeqList op xs ys)
+              LeqList op (x :: xs) (y :: ys) ->
+              op x y ∧ ((¬ op y x) ∨ LeqList op xs ys)
 unconsOrder (consOrder a b) = record {l = a ; r = b}
 
 ListOrder : {A : Set} ->
-    (op : RelationOn A) -> Order op -> Order (LeqList op)
+            (op : RelationOn A) -> Order op -> Order (LeqList op)
 ListOrder op elemord = record { refl = listRefl ; trans = listTrans } where
 
     elemtrans : forall {a b c} -> op a b -> op b c -> op a c
@@ -45,8 +46,8 @@ ListOrder op elemord = record { refl = listRefl ; trans = listTrans } where
     listTrans (consOrder p1 (orRight p2)) (consOrder p3 (orRight p4)) =
         consOrder (elemtrans p1 p3) (orRight (listTrans p2 p4))
 
-ListTotalOrder : {A : Set} ->
-    (op : RelationOn A) -> DecidableOrder op -> TotalOrder (LeqList op)
+ListTotalOrder : {A : Set} -> (op : RelationOn A) ->
+                 DecidableOrder op -> TotalOrder (LeqList op)
 ListTotalOrder {A} op elemord =
     record { base = ListOrder op $ TotalOrder.base $ DecidableOrder.base elemord
            ; total = listTotal } where
@@ -54,7 +55,7 @@ ListTotalOrder {A} op elemord =
     elemtotal : forall {a b} -> op a b ∨ op b a
     elemtotal = TotalOrder.total $ DecidableOrder.base elemord
 
-    elemdecide : (a b : A) -> op a b ∨ (op a b -> False)
+    elemdecide : (a b : A) -> op a b ∨ (¬ op a b)
     elemdecide = DecidableOrder.decide elemord
 
     listTotal : forall {a b} -> LeqList op a b ∨ LeqList op b a
@@ -69,18 +70,18 @@ ListTotalOrder {A} op elemord =
     ... | orRight !x<=y | orRight !y<=x =
         False-elim $ orMerge !x<=y !y<=x elemtotal
 
-ListDecidableOrder : {A : Set} ->
-    (op : RelationOn A) -> DecidableOrder op -> DecidableOrder (LeqList op)
+ListDecidableOrder : {A : Set} -> (op : RelationOn A) ->
+                     DecidableOrder op -> DecidableOrder (LeqList op)
 ListDecidableOrder {A} op elemord =
     record { base = ListTotalOrder op elemord ; decide = listDecide } where
 
-    elemdecide : (a b : A) -> op a b ∨ (op a b -> False)
+    elemdecide : (a b : A) -> op a b ∨ (¬ op a b)
     elemdecide = DecidableOrder.decide elemord
 
-    listDecide : (a b : [ A ]) -> LeqList op a b ∨ (LeqList op a b -> False)
+    listDecide : (a b : [ A ]) -> LeqList op a b ∨ (¬ LeqList op a b)
     listDecide [] _ = orLeft nullIsMinimal
     listDecide (x :: xs) [] = orRight f where
-        f : LeqList op (x :: xs) [] -> False
+        f : ¬ LeqList op (x :: xs) []
         f ()
     listDecide (x :: xs) (y :: ys)
         with elemdecide x y | elemdecide y x | listDecide xs ys
@@ -91,4 +92,8 @@ ListDecidableOrder {A} op elemord =
     ... | orLeft x<=y | orRight !y<=x | _ =
         orLeft $ consOrder x<=y $ orLeft !y<=x
     ... | orRight !x<=y | _ | _ = orRight $ !x<=y ∘ andLeft ∘ unconsOrder
+
+length : {A : Set} -> [ A ] -> Nat
+length [] = zero
+length (_ :: xs) = succ $ length xs
 

@@ -12,7 +12,7 @@ open import Nat
 
 caseord : {A B : Set}{op : RelationOn A} ->
           DecidableOrder op -> (x y : A) ->
-          (op x y -> B) -> ((op x y -> False) -> B) -> B
+          (op x y -> B) -> (¬ op x y -> B) -> B
 caseord order x y f g = orMerge f g $ DecidableOrder.decide order x y
 
 merge : {A : Set}{op : RelationOn A} ->
@@ -25,21 +25,18 @@ merge order (x :: xs) (y :: ys) =
         (const (y :: merge order (x :: xs) ys))
 
 omerge : {A : Set}{op : RelationOn A}{b : A} ->
-         (n : Nat) ->
          (order : DecidableOrder op) ->
-         (xs : OList order b) -> (ys : OList order b) ->
-         {_ : NatEq n (olength xs + olength ys)} -> OList order b
-omerge zero _ [#] [#] = [#]
-omerge (succ n) order [#] (y :# yr #: ys) {eqSucc c} =
-    y :# yr #: omerge n order [#] ys {c}
-omerge (succ n) order (x :# xr #: xs) [#] {eqSucc c} =
-    x :# xr #: omerge n order xs [#] {c}
-omerge (succ n) order (x :# xr #: xs) (y :# yr #: ys) {eqSucc c} =
+         (xs ys : OList order b) -> OList order b
+omerge {A} {op} {b} order l1 l2
+        with OList.l l1 | OList.o l1 | OList.l l2 | OList.o l2
+... | [] | _ | l | o = record {l = l ; o = o}
+... | l | o | [] | _ = record {l = l ; o = o}
+... | (x :: xs) | orderedCons .x p1 p2 | (y :: ys) | orderedCons .y p3 p4 =
     caseord order x y
-    (\ x<=y -> x :# xr #: omerge n order xs (y :# x<=y #: ys) {c})
-    (\ !x<=y -> y :# yr #:
-        omerge n order (x :# trichotomy' order !x<=y #: xs) ys
-            {natEqTrans c $ succAREq' {olength xs} {olength ys}})
-omerge zero _ [#] (_ :# _ #: _) {()}
-omerge zero _ (_ :# _ #: _) _ {()}
-omerge (succ _) _ [#] [#] {()}
+    (\ x<=y -> x :# p1 #: omerge order
+        record {l = xs ; o = p2}
+        record {l = y :: ys ; o = orderedCons y x<=y p4})
+    (\ !x<=y -> y :# p3 #: omerge order
+        record {l = x :: xs ; o = orderedCons x (trichotomy' order !x<=y) p2}
+        record {l = ys ; o = p4})
+

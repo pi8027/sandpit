@@ -42,13 +42,14 @@ unliftSucc (liftSucc rel) = rel
 <=DecidableOrder : DecidableOrder _<=_
 <=DecidableOrder = record { base = <=TotalOrder ; decide = <=decide } where
 
-    <=decide : (a b : Nat) -> (a <= b) ∨ (a <= b -> False)
+    <=decide : (a b : Nat) -> (a <= b) ∨ ¬ (a <= b)
     <=decide zero _ = orLeft zeroIsMinimal
     <=decide (succ a) zero = orRight f where
-        f : succ a <= zero -> False
+        f : ¬ (succ a <= zero)
         f ()
     <=decide (succ a) (succ b) =
         orMap liftSucc (flip _∘_ unliftSucc) $ <=decide a b
+
 _+_ : Nat -> Nat -> Nat
 zero + b = b
 succ a + b = succ $ a + b
@@ -71,3 +72,4 @@ succAREq {succ a} {b} = eqSucc $ succAREq {a} {b}
 
 succAREq' : forall {a b} -> NatEq (a + succ b) (succ (a + b))
 succAREq' {a} {b} = natEqSym $ succAREq {a} {b}
+

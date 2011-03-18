@@ -8,6 +8,9 @@ data False : Set where
 False-elim : {A : Set} -> False -> A
 False-elim ()
 
+¬_ : Set -> Set
+¬ A = A -> False
+
 data _∨_ (Left Right : Set) : Set where
     orLeft : Left -> Left ∨ Right
     orRight : Right -> Left ∨ Right
