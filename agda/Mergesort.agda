@@ -64,17 +64,15 @@ merge {A} {op} {b} {succ len} {x' :: xs'} {y' :: ys'} order l1 l2 {eqSucc eq}
     slistPermTrans (permAppend px py) $
         caseord order x y f $ (slistPermTrans (gtrans {xs = x :: xs})) ∘ g where
     f : op x y -> SList order b ((x :: xs) ++ (y :: ys))
-    f x<=y =
-        x :# p1 #: merge {len = len} order
-             record { l = xs; o = p2; p = permRefl }
-             record { l = y :: ys; o = orderedCons y x<=y p4; p = permRefl }
-             {natEqTrans eq $ addEq (natEqDesucc (permLength px)) (permLength py)}
+    f x<=y = x :# p1 #: merge {len = len} order
+         record { l = xs; o = p2; p = permRefl }
+         record { l = y :: ys; o = orderedCons y x<=y p4; p = permRefl }
+         {natEqTrans eq $ addEq (natEqDesucc (permLength px)) (permLength py)}
     g : ¬ op x y -> SList order b (y :: ((x :: xs) ++ ys))
-    g !x<=y =
-        y :# p3 #: merge {len = len} order
-             record { l = x :: xs; o = orderedCons x (trichotomy' order !x<=y) p2; p = permRefl }
-             record { l = ys; o = p4; p = permRefl }
-             {natEqTrans eq $ succAREq (natEqDesucc (permLength px)) (natEqDesucc (permLength py))}
+    g !x<=y = y :# p3 #: merge {len = len} order
+         record { l = x :: xs; o = orderedCons x (trichotomy' order !x<=y) p2; p = permRefl }
+         record { l = ys; o = p4; p = permRefl }
+         {natEqTrans eq $ succAREq (natEqDesucc (permLength px)) (natEqDesucc (permLength py))}
     gtrans : {y : A}{xs ys : [ A ]} -> Permutation (xs ++ (y :: ys)) (y :: xs ++ ys)
     gtrans {xs = []} = permRefl
     gtrans {y} {x :: xs} {ys} = permTrans (permSkip (gtrans {xs = xs})) permSwap
