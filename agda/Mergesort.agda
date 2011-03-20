@@ -52,12 +52,9 @@ merge : {A : Set}{op : RelationOn A}{b : A}{len : Nat}{xs' ys' : [ A ]} ->
         (xs : SList order b xs') -> (ys : SList order b ys') ->
         {eq : NatEq len (length xs' + length ys')} ->
         SList order b (xs' ++ ys')
-merge {xs' = []} {ys' = []} _ _ _ =
-    record { l = []; o = orderedNull; p = permNull}
-merge {ys' = []} order l1 l2 =
-    record { l = SList.l l1; o = SList.o l1; p = permTrans permAppendNull (SList.p l1)}
-merge {xs' = []} order l1 l2 =
-    record { l = SList.l l2; o = SList.o l2; p = SList.p l2}
+merge {xs' = []} {ys' = []} _ _ _ = [#]
+merge {ys' = []} order l1 l2 = slistPermTrans permAppendNull l1
+merge {xs' = []} order l1 l2 = l2
 merge {len = zero} {xs' = _ :: _} _ _ _ {()}
 merge {A} {op} {b} {succ len} {x' :: xs'} {y' :: ys'} order l1 l2 {eqSucc eq}
     with SList.l l1 | SList.o l1 | SList.p l1 | SList.l l2 | SList.o l2 | SList.p l2
