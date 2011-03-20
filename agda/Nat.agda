@@ -71,9 +71,3 @@ succAREq : forall {a a' b b'} ->
 succAREq eqZero eq = eqSucc eq
 succAREq (eqSucc eq1) eq2 = eqSucc $ succAREq eq1 eq2
 
-addEq : forall {a b c d} -> NatEq a b -> NatEq c d -> NatEq (a + c) (b + d)
-addEq eqZero eq = eq
-addEq (eqSucc eq1) eq2 = eqSucc $ addEq eq1 eq2
-
-natEqDesucc : forall {a b} -> NatEq (succ a) (succ b) -> NatEq a b
-natEqDesucc (eqSucc eq) = eq
