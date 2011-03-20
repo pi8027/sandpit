@@ -80,6 +80,25 @@ merge_ordered {len = succ len} order (x :: xs) (y :: ys)
         {natEqTrans eq (succAREq {a = length xs} natEqRefl natEqRefl)}
 merge_ordered {len = zero} _ (_ :: _) _ _ _ {()}
 
+merge_permutation :
+    {A : Set}{op : RelationOn A}{len : Nat} ->
+    (order : DecidableOrder op) -> (xs ys : [ A ]) ->
+    {eq : NatEq len (length xs + length ys)} ->
+    Permutation (xs ++ ys) (merge order xs ys {eq})
+merge_permutation order [] ys = permRefl
+merge_permutation {len = succ len} order (x :: xs) [] {eqSucc eq} =
+    permSkip $ merge order permutation xs []
+merge_permutation {A = A} {len = succ len} order (x :: xs) (y :: ys) {eqSucc eq}
+    with DecidableOrder.decide order x y
+... | orLeft x<=y = permSkip $ merge_permutation {len = len} order xs (y :: ys) {eq}
+... | orRight !x<=y = permTrans (gtrans {xs = x :: xs}) $ permSkip $
+    merge_permutation {len = len} order (x :: xs) ys
+        {natEqTrans eq (succAREq {a = length xs} natEqRefl natEqRefl)} where
+    gtrans : {y : A}{xs ys : [ A ]} -> Permutation (xs ++ (y :: ys)) (y :: xs ++ ys)
+    gtrans {xs = []} = permRefl
+    gtrans {xs = x :: xs} = permTrans (permSkip (gtrans {xs = xs})) permSwap
+merge_permutation {len = zero} _ (_ :: _) _ {()}
+
 -- merge : {A : Set}{op : RelationOn A}{b : A}{len : Nat}{xs' ys' : [ A ]} ->
 --         (order : DecidableOrder op) ->
 --         (xs : SList order b xs') -> (ys : SList order b ys') ->
