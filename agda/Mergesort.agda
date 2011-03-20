@@ -9,12 +9,12 @@ open import List
 open import OList
 open import Permutation
 
-caseord : {A B : Set}{op : RelationOn A} ->
-          DecidableOrder op -> (x y : A) ->
-          (op x y -> B) -> (¬ op x y -> B) -> B
-caseord order x y f g with DecidableOrder.decide order x y
-... | orLeft a = f a
-... | orRight b = g b
+-- caseord : {A B : Set}{op : RelationOn A} ->
+--           DecidableOrder op -> (x y : A) ->
+--           (op x y -> B) -> (¬ op x y -> B) -> B
+-- caseord order x y f g with DecidableOrder.decide order x y
+-- ... | orLeft a = f a
+-- ... | orRight b = g b
 
 -- record SList {A : Set} {op : RelationOn A}
 --              (order : DecidableOrder op) (b : A) (il : [ A ]) : Set where
@@ -49,23 +49,36 @@ permLength (permTrans perm1 perm2) = natEqTrans (permLength perm1) (permLength p
 -- slistPermTrans perm list =
 --     record { l = SList.l list; o = SList.o list; p = permTrans perm $ SList.p list }
 
-merge : {A : Set}{op : RelationOn A} ->
-        (order : DecidableOrder op) -> [ A ] -> [ A ] -> [ A ]
-merge order [] l = l
-merge order l [] = l
-merge order (x :: xs) (y :: ys) =
-    caseord order x y
-    (const (x :: merge order xs (y :: ys)))
-    (const (y :: merge order (x :: xs) ys))
+merge : {A : Set}{op : RelationOn A}{len : Nat} ->
+        (order : DecidableOrder op) -> (xs ys : [ A ]) ->
+        {eq : NatEq len (length xs + length ys)} -> [ A ]
+merge order [] ys = ys
+merge {len = succ len} order (x :: xs) [] {eqSucc eq} =
+    x :: merge {len = len} order xs [] {eq}
+merge {len = succ len} order (x :: xs) (y :: ys) {eqSucc eq}
+    with DecidableOrder.decide order x y
+... | orLeft _ = x :: merge order xs (y :: ys) {eq}
+... | orRight _ = y :: merge order (x :: xs) ys
+    {natEqTrans eq (succAREq {length xs} natEqRefl natEqRefl)}
+merge {len = zero} _ (_ :: _) _ {()}
 
-merge_ordered : {A : Set}{op : RelationOn A}{b : A} ->
+merge_ordered : {A : Set}{op : RelationOn A}{b : A}{len : Nat} ->
                 (order : DecidableOrder op) -> (xs ys : [ A ]) ->
                 ListIsOrdered order b xs -> ListIsOrdered order b ys ->
-                ListIsOrdered order b (merge order xs ys)
-merge_ordered order [] _ _ yo = yo
-merge_ordered order (x :: xs) [] xo _ = xo
-merge_ordered order (x :: xs) (y :: ys) (orderedCons .x p1 p2) (orderedCons .y p3 p4) =
-    caseord order x y {!!} {!!}
+                {eq : NatEq len (length xs + length ys)} ->
+                ListIsOrdered order b (merge order xs ys {eq})
+merge_ordered order [] ys p1 p2 = p2
+merge_ordered {len = succ len} order (x :: xs) [] (orderedCons .x p1 p2) p3 {eqSucc eq} =
+    orderedCons x p1 $ merge order ordered xs [] p2 orderedNull
+merge_ordered {len = succ len} order (x :: xs) (y :: ys)
+    (orderedCons .x p1 p2) (orderedCons .y p3 p4) {eqSucc eq}
+        with DecidableOrder.decide order x y
+... | orLeft x<=y = orderedCons x p1 $
+    merge_ordered {len = len} order xs (y :: ys) p2 (orderedCons y x<=y p4) {eq}
+... | orRight !x<=y = orderedCons y p3 $ merge_ordered {len = len}
+    order (x :: xs) ys (orderedCons x (trichotomy' order !x<=y) p2) p4
+        {natEqTrans eq (succAREq {a = length xs} natEqRefl natEqRefl)}
+merge_ordered {len = zero} _ (_ :: _) _ _ _ {()}
 
 -- merge : {A : Set}{op : RelationOn A}{b : A}{len : Nat}{xs' ys' : [ A ]} ->
 --         (order : DecidableOrder op) ->

@@ -66,13 +66,6 @@ natEqSym : forall {a b} -> NatEq a b -> NatEq b a
 natEqSym eqZero = eqZero
 natEqSym (eqSucc r) = eqSucc $ natEqSym r
 
--- succAREq : forall {a b} -> NatEq (succ (a + b)) (a + succ b)
--- succAREq {zero} {b} = eqSucc natEqRefl
--- succAREq {succ a} {b} = eqSucc $ succAREq {a} {b}
-
--- succAREq' : forall {a b} -> NatEq (a + succ b) (succ (a + b))
--- succAREq' {a} {b} = natEqSym $ succAREq {a} {b}
-
 succAREq : forall {a a' b b'} ->
     NatEq a a' -> NatEq b b' -> NatEq (a + succ b) (succ (a' + b'))
 succAREq eqZero eq = eqSucc eq
