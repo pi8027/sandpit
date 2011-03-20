@@ -96,3 +96,7 @@ ListDecidableOrder {A} op elemord =
 length : {A : Set} -> [ A ] -> Nat
 length [] = zero
 length (_ :: xs) = succ $ length xs
+
+_++_ : {A : Set} -> [ A ] -> [ A ] -> [ A ]
+[] ++ ys = ys
+(x :: xs) ++ ys = x :: (xs ++ ys)

@@ -9,7 +9,7 @@ data Nat : Set where
     zero : Nat
     succ : Nat -> Nat
 
-data NatEq : Nat -> Nat -> Set where
+data NatEq : RelationOn Nat where
     eqZero : NatEq zero zero
     eqSucc : forall {m n} -> NatEq m n -> NatEq (succ m) (succ n)
 
@@ -66,10 +66,21 @@ natEqSym : forall {a b} -> NatEq a b -> NatEq b a
 natEqSym eqZero = eqZero
 natEqSym (eqSucc r) = eqSucc $ natEqSym r
 
-succAREq : forall {a b} -> NatEq (succ (a + b)) (a + succ b)
-succAREq {zero} {b} = eqSucc natEqRefl
-succAREq {succ a} {b} = eqSucc $ succAREq {a} {b}
+-- succAREq : forall {a b} -> NatEq (succ (a + b)) (a + succ b)
+-- succAREq {zero} {b} = eqSucc natEqRefl
+-- succAREq {succ a} {b} = eqSucc $ succAREq {a} {b}
 
-succAREq' : forall {a b} -> NatEq (a + succ b) (succ (a + b))
-succAREq' {a} {b} = natEqSym $ succAREq {a} {b}
+-- succAREq' : forall {a b} -> NatEq (a + succ b) (succ (a + b))
+-- succAREq' {a} {b} = natEqSym $ succAREq {a} {b}
 
+succAREq : forall {a a' b b'} ->
+    NatEq a a' -> NatEq b b' -> NatEq (a + succ b) (succ (a' + b'))
+succAREq eqZero eq = eqSucc eq
+succAREq (eqSucc eq1) eq2 = eqSucc $ succAREq eq1 eq2
+
+addEq : forall {a b c d} -> NatEq a b -> NatEq c d -> NatEq (a + c) (b + d)
+addEq eqZero eq = eq
+addEq (eqSucc eq1) eq2 = eqSucc $ addEq eq1 eq2
+
+natEqDesucc : forall {a b} -> NatEq (succ a) (succ b) -> NatEq a b
+natEqDesucc (eqSucc eq) = eq
