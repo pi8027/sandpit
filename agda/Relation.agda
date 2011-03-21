@@ -12,13 +12,13 @@ RelationOn A = Relation A A
 
 record Order {A : Set} (op : RelationOn A) : Set where
     field
-        refl  : forall {i} -> op i i
-        trans : forall {a b c} -> op a b -> op b c -> op a c
+        refl  : ∀ {i} -> op i i
+        trans : ∀ {a b c} -> op a b -> op b c -> op a c
 
 record TotalOrder {A : Set} (op : RelationOn A) : Set where
     field
         base  : Order op
-        total : forall {a b} -> op a b ∨ op b a
+        total : ∀ {a b} -> op a b ∨ op b a
 
 record DecidableOrder {A : Set} (op : RelationOn A) : Set where
     field
@@ -27,10 +27,11 @@ record DecidableOrder {A : Set} (op : RelationOn A) : Set where
 
 trichotomy : {A : Set}{op : RelationOn A}{a b : A} ->
              TotalOrder op -> ¬ (op b a) -> op a b
-trichotomy {A} {op} {a} {b} ord !b<=a with TotalOrder.total ord {a} {b}
+trichotomy {a = a} {b = b} ord !b<=a with TotalOrder.total ord {a} {b}
 ... | orLeft a<=b = a<=b
 ... | orRight b<=a = False-elim $ !b<=a b<=a
 
 trichotomy' : {A : Set}{op : RelationOn A}{a b : A} ->
               DecidableOrder op -> ¬ op b a -> op a b
-trichotomy' ord !b<=a = trichotomy (DecidableOrder.base ord) !b<=a
+trichotomy' = trichotomy ∘ DecidableOrder.base
+

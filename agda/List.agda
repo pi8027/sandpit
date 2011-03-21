@@ -13,12 +13,11 @@ data [_] (A : Set) : Set where
     _::_ : A -> [ A ] -> [ A ]
 
 data LeqList {A : Set} (op : RelationOn A) : RelationOn [ A ] where
-    nullIsMinimal : forall {l} -> LeqList op [] l
-    consOrder : forall {x y xs ys} ->
-                op x y -> ((¬ op y x) ∨ LeqList op xs ys)  ->
+    nullIsMinimal : ∀ {l} -> LeqList op [] l
+    consOrder : ∀ {x y xs ys} -> op x y -> (¬ op y x) ∨ LeqList op xs ys ->
                 LeqList op (x :: xs) (y :: ys)
 
-unconsOrder : forall {A : Set}{op : RelationOn A}{x xs y ys} ->
+unconsOrder : ∀ {A : Set}{op : RelationOn A}{x xs y ys} ->
               LeqList op (x :: xs) (y :: ys) ->
               op x y ∧ ((¬ op y x) ∨ LeqList op xs ys)
 unconsOrder (consOrder a b) = record {l = a ; r = b}
@@ -27,14 +26,14 @@ ListOrder : {A : Set} ->
             (op : RelationOn A) -> Order op -> Order (LeqList op)
 ListOrder op elemord = record { refl = listRefl ; trans = listTrans } where
 
-    elemtrans : forall {a b c} -> op a b -> op b c -> op a c
+    elemtrans : ∀ {a b c} -> op a b -> op b c -> op a c
     elemtrans = Order.trans elemord
 
-    listRefl : forall {i} -> LeqList op i i
+    listRefl : ∀ {i} -> LeqList op i i
     listRefl {[]} = nullIsMinimal
     listRefl {x :: xs} = consOrder (Order.refl elemord) (orRight listRefl)
 
-    listTrans : forall {a b c} ->
+    listTrans : ∀ {a b c} ->
         LeqList op a b -> LeqList op b c -> LeqList op a c
     listTrans {a = []} _ _ = nullIsMinimal
     listTrans {a = _ :: _} {b = []} () p2
@@ -52,13 +51,13 @@ ListTotalOrder {A} op elemord =
     record { base = ListOrder op $ TotalOrder.base $ DecidableOrder.base elemord
            ; total = listTotal } where
 
-    elemtotal : forall {a b} -> op a b ∨ op b a
+    elemtotal : ∀ {a b} -> op a b ∨ op b a
     elemtotal = TotalOrder.total $ DecidableOrder.base elemord
 
     elemdecide : (a b : A) -> op a b ∨ (¬ op a b)
     elemdecide = DecidableOrder.decide elemord
 
-    listTotal : forall {a b} -> LeqList op a b ∨ LeqList op b a
+    listTotal : ∀ {a b} -> LeqList op a b ∨ LeqList op b a
     listTotal {a = []} = orLeft nullIsMinimal
     listTotal {b = []} = orRight nullIsMinimal
     listTotal {x :: xs} {y :: ys} with elemdecide x y | elemdecide y x
@@ -93,10 +92,24 @@ ListDecidableOrder {A} op elemord =
         orLeft $ consOrder x<=y $ orLeft !y<=x
     ... | orRight !x<=y | _ | _ = orRight $ !x<=y ∘ andLeft ∘ unconsOrder
 
-length : {A : Set} -> [ A ] -> Nat
+length : ∀ {A} -> [ A ] -> Nat
 length [] = zero
 length (_ :: xs) = succ $ length xs
 
-_++_ : {A : Set} -> [ A ] -> [ A ] -> [ A ]
+_++_ : ∀ {A} -> [ A ] -> [ A ] -> [ A ]
 [] ++ ys = ys
 (x :: xs) ++ ys = x :: (xs ++ ys)
+
+foldr : ∀ {A B} -> (A -> B -> B) -> B -> [ A ] -> B
+foldr f b [] = b
+foldr f b (x :: xs) = f x $ foldr f b xs
+
+foldl : ∀ {A B} -> (A -> B -> A) -> A -> [ B ] -> A
+foldl f b [] = b
+foldl f b (x :: xs) = foldl f (f b x) xs
+
+map : ∀ {A B} -> (A -> B) -> [ A ] -> [ B ]
+map f = foldr (_::_ ∘ f) []
+reverse : ∀ {A} -> [ A ] -> [ A ]
+reverse = foldl (flip _::_) []
+

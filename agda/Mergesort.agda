@@ -9,9 +9,9 @@ open import List
 open import Ordered
 open import Permutation
 
-merge : {A : Set}{op : RelationOn A}{len : Nat} ->
-        (order : DecidableOrder op) -> (xs ys : [ A ]) ->
-        {eq : NatEq len (length xs + length ys)} -> [ A ]
+merge :
+    ∀ {A op len} -> DecidableOrder op ->
+    (xs ys : [ A ]) -> {eq : NatEq len (length xs + length ys)} -> [ A ]
 merge order [] ys = ys
 merge {len = succ len} order (x :: xs) [] {eqSucc eq} =
     x :: merge {len = len} order xs [] {eq}
@@ -22,10 +22,12 @@ merge {len = succ len} order (x :: xs) (y :: ys) {eqSucc eq}
     {natEqTrans eq (succAREq {length xs} natEqRefl natEqRefl)}
 merge {len = zero} _ (_ :: _) _ {()}
 
+merge' : ∀ {A op} -> DecidableOrder op -> [ A ] -> [ A ] -> [ A ]
+merge' order xs ys = merge {len = length xs + length ys} order xs ys {natEqRefl}
+
 merge_ordered :
-    {A : Set}{op : RelationOn A}{b : A}{len : Nat} ->
-    (order : DecidableOrder op) -> (xs ys : [ A ]) ->
-    Ordered order b xs -> Ordered order b ys ->
+    ∀ {A op b len} -> (order : DecidableOrder op) ->
+    (xs ys : [ A ]) -> Ordered order b xs -> Ordered order b ys ->
     {eq : NatEq len (length xs + length ys)} ->
     Ordered order b (merge order xs ys {eq})
 merge_ordered _ [] _ _ p2 = p2
@@ -42,10 +44,15 @@ merge_ordered {len = succ len} order (x :: xs) (y :: ys)
         (orderedCons x (trichotomy' order !x<=y) p2) p4
 merge_ordered {len = zero} _ (_ :: _) _ _ _ {()}
 
+merge_ordered' :
+    ∀ {A op b} -> (order : DecidableOrder op) ->
+    (xs ys : [ A ]) -> Ordered order b xs -> Ordered order b ys ->
+    Ordered order b (merge' order xs ys)
+merge_ordered' order xs ys ox oy = merge_ordered order xs ys ox oy
+
 merge_permutation :
-    {A : Set}{op : RelationOn A}{len : Nat} ->
-    (order : DecidableOrder op) -> (xs ys : [ A ]) ->
-    {eq : NatEq len (length xs + length ys)} ->
+    ∀ {A op len} -> (order : DecidableOrder op) ->
+    (xs ys : [ A ]) -> {eq : NatEq len (length xs + length ys)} ->
     Permutation (xs ++ ys) (merge order xs ys {eq})
 merge_permutation order [] ys = permRefl
 merge_permutation {len = succ len} order (x :: xs) [] {eqSucc eq} =
@@ -60,3 +67,24 @@ merge_permutation {A = A} {len = succ len} order (x :: xs) (y :: ys) {eqSucc _}
     move {xs = []} = permRefl
     move {xs = x :: xs} = permTrans (permSkip (move {xs = xs})) permSwap
 merge_permutation {len = zero} _ (_ :: _) _ {()}
+
+merge_permutation' :
+    ∀ {A op} -> (order : DecidableOrder op) ->
+    (xs ys : [ A ]) -> Permutation (xs ++ ys) (merge' order xs ys)
+merge_permutation' order xs ys = merge_permutation order xs ys
+
+mergesort'' : {A : Set}{op : RelationOn A} ->
+              DecidableOrder op -> [ [ A ] ] -> [ [ A ] ]
+mergesort'' order (x :: x' :: xs) = merge' order x x' :: mergesort'' order xs
+mergesort'' order l = l
+
+mergesort' : {A : Set}{op : RelationOn A} ->
+             DecidableOrder op -> [ [ A ] ] -> [ A ]
+mergesort' order [] = []
+mergesort' order (x :: []) = x
+mergesort' order l = mergesort' order $ mergesort'' order l
+
+mergesort : {A : Set}{op : RelationOn A} ->
+            DecidableOrder op -> [ A ] -> [ A ]
+mergesort order xs = mergesort' order $ map (flip _::_ []) xs
+

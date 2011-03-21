@@ -20,17 +20,17 @@ record _∧_ (Left Right : Set) : Set where
         l : Left
         r : Right
 
-andLeft : {Left Right : Set} -> Left ∧ Right -> Left
+andLeft : ∀ {Left Right} -> Left ∧ Right -> Left
 andLeft = _∧_.l
 
-andRight : {Left Right : Set} -> Left ∧ Right -> Right
+andRight : ∀ {Left Right} -> Left ∧ Right -> Right
 andRight = _∧_.r
 
-orMerge : {Left Right A : Set} ->
+orMerge : ∀ {Left Right A} ->
     (Left -> A) -> (Right -> A) -> Left ∨ Right -> A
 orMerge lf _ (orLeft left) = lf left
 orMerge _ rf (orRight right) = rf right
 
-orMap : {L L' R R' : Set} -> (L -> L') -> (R -> R') -> L ∨ R -> L' ∨ R'
+orMap : ∀ {L L' R R'} -> (L -> L') -> (R -> R') -> L ∨ R -> L' ∨ R'
 orMap f g = orMerge (orLeft ∘ f) (orRight ∘ g)
 
