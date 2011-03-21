@@ -20,35 +20,35 @@ data _<=_ : RelationOn Nat where
 unliftSucc : ∀ {m n} -> succ m <= succ n -> m <= n
 unliftSucc (liftSucc rel) = rel
 
+<=refl : ∀ {i} -> i <= i
+<=refl {zero} = zeroIsMinimal
+<=refl {succ _} = liftSucc <=refl
+
+<=trans : ∀ {a b c} -> a <= b -> b <= c -> a <= c
+<=trans zeroIsMinimal p2 = zeroIsMinimal
+<=trans (liftSucc p1) (liftSucc p2) = liftSucc $ <=trans p1 p2
+
+<=total : ∀ {a b} -> (a <= b) ∨ (b <= a)
+<=total {a = zero} = orLeft zeroIsMinimal
+<=total {b = zero} = orRight zeroIsMinimal
+<=total {succ a} {succ b} = orMap liftSucc liftSucc <=total
+
+<=decide : (a b : Nat) -> (a <= b) ∨ ¬ (a <= b)
+<=decide zero _ = orLeft zeroIsMinimal
+<=decide (succ a) zero = orRight f where
+    f : ¬ (succ a <= zero)
+    f ()
+<=decide (succ a) (succ b) =
+    orMap liftSucc (flip _∘_ unliftSucc) $ <=decide a b
+
 <=Order : Order _<=_
-<=Order = record { refl = <=refl ; trans = <=trans } where
-
-    <=refl : ∀ {i} -> i <= i
-    <=refl {zero} = zeroIsMinimal
-    <=refl {succ _} = liftSucc <=refl
-
-    <=trans : ∀ {a b c} -> a <= b -> b <= c -> a <= c
-    <=trans zeroIsMinimal p2 = zeroIsMinimal
-    <=trans (liftSucc p1) (liftSucc p2) = liftSucc $ <=trans p1 p2
+<=Order = record { refl = <=refl ; trans = <=trans }
 
 <=TotalOrder : TotalOrder _<=_
-<=TotalOrder = record { base = <=Order ; total = <=total } where
-
-    <=total : ∀ {a b} -> (a <= b) ∨ (b <= a)
-    <=total {a = zero} = orLeft zeroIsMinimal
-    <=total {b = zero} = orRight zeroIsMinimal
-    <=total {succ a} {succ b} = orMap liftSucc liftSucc <=total
+<=TotalOrder = record { base = <=Order ; total = <=total }
 
 <=DecidableOrder : DecidableOrder _<=_
-<=DecidableOrder = record { base = <=TotalOrder ; decide = <=decide } where
-
-    <=decide : (a b : Nat) -> (a <= b) ∨ ¬ (a <= b)
-    <=decide zero _ = orLeft zeroIsMinimal
-    <=decide (succ a) zero = orRight f where
-        f : ¬ (succ a <= zero)
-        f ()
-    <=decide (succ a) (succ b) =
-        orMap liftSucc (flip _∘_ unliftSucc) $ <=decide a b
+<=DecidableOrder = record { base = <=TotalOrder ; decide = <=decide }
 
 _+_ : Nat -> Nat -> Nat
 zero + b = b
@@ -71,3 +71,12 @@ succAREq : ∀ {a a' b b'} ->
 succAREq eqZero eq = eqSucc eq
 succAREq (eqSucc eq1) eq2 = eqSucc $ succAREq eq1 eq2
 
+mutual
+
+    <=succ : ∀ {a b} -> a <= b -> a <= succ b
+    <=succ {zero} _ = zeroIsMinimal
+    <=succ {succ a} {b} p = liftSucc $ <=desucc p
+
+    <=desucc : ∀ {a b} -> succ a <= b -> a <= b
+    <=desucc {zero} _ = zeroIsMinimal
+    <=desucc {succ a} p = <=trans (liftSucc (<=succ <=refl)) p

@@ -75,14 +75,23 @@ merge_permutation' order xs ys = merge_permutation order xs ys
 
 mergesort'' : {A : Set}{op : RelationOn A} ->
               DecidableOrder op -> [ [ A ] ] -> [ [ A ] ]
+mergesort'' order [] = []
+mergesort'' order (x :: []) = x :: []
 mergesort'' order (x :: x' :: xs) = merge' order x x' :: mergesort'' order xs
-mergesort'' order l = l
+
+mergesort''-decreasing :
+    {A : Set}{op : RelationOn A}{order : DecidableOrder op}{x x' : [ A ]}{xs : [ [ A ] ]} ->
+    ¬ (length (x :: x' :: xs) <= length (mergesort'' order (x :: x' :: xs)))
+mergesort''-decreasing {xs = []} (liftSucc ())
+mergesort''-decreasing {xs = _ :: []} (liftSucc (liftSucc ()))
+mergesort''-decreasing {xs = x :: x' :: xs} (liftSucc (liftSucc p)) =
+    mergesort''-decreasing {x = x} {x'} {xs} $ <=succ p
 
 mergesort' : {A : Set}{op : RelationOn A} ->
              DecidableOrder op -> [ [ A ] ] -> [ A ]
 mergesort' order [] = []
 mergesort' order (x :: []) = x
-mergesort' order l = mergesort' order $ mergesort'' order l
+mergesort' order (x :: x' :: xs) = mergesort' order $ mergesort'' order (x :: x' :: xs)
 
 mergesort : {A : Set}{op : RelationOn A} ->
             DecidableOrder op -> [ A ] -> [ A ]
