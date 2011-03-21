@@ -58,6 +58,12 @@ natEqRefl : ∀ {i} -> NatEq i i
 natEqRefl {zero} = eqZero
 natEqRefl {succ a} = eqSucc $ natEqRefl {a}
 
+natEqRefl' : ∀ {a b} -> (f : Nat -> Nat) -> NatEq a b -> NatEq (f a) (f b)
+natEqRefl' {zero} {zero} f eqZero = natEqRefl {f zero}
+natEqRefl' {succ a} {succ b} f (eqSucc eq) = natEqRefl' {a} {b} (f ∘ succ) eq
+natEqRefl' {zero} {succ _} _ ()
+natEqRefl' {succ _} {zero} _ ()
+
 natEqTrans : ∀ {a b c} -> NatEq a b -> NatEq b c -> NatEq a c
 natEqTrans eqZero eqZero = eqZero
 natEqTrans (eqSucc a) (eqSucc b) = eqSucc $ natEqTrans a b
