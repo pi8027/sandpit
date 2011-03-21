@@ -97,8 +97,7 @@ mergePair-half {l = _ :: []} = eqSucc eqZero
 mergePair-half {l = _ :: _ :: l} = eqSucc $ mergePair-half {l = l}
 
 mergeAll :
-    {A : Set}{op : RelationOn A}{len : Nat} ->
-    DecidableOrder op -> (xs : [ [ A ] ]) ->
+    ∀ {A op len} -> DecidableOrder op -> (xs : [ [ A ] ]) ->
     {eq : NatEq len (natLog2 (length xs))} -> [ A ]
 mergeAll {len = zero} order [] = []
 mergeAll {len = zero} order (x :: []) = x
@@ -109,11 +108,9 @@ mergeAll {len = zero} _ (_ :: _ :: _) {()}
 mergeAll {len = succ _} _ [] {()}
 mergeAll {len = succ _} _ (_ :: []) {()}
 
-mergeAll' :
-    {A : Set}{op : RelationOn A} -> DecidableOrder op -> [ [ A ] ] -> [ A ]
+mergeAll' : ∀ {A op} -> DecidableOrder op -> [ [ A ] ] -> [ A ]
 mergeAll' order xs = mergeAll {len = natLog2 $ length xs} order xs {natEqRefl}
 
-mergesort :
-    {A : Set}{op : RelationOn A} -> DecidableOrder op -> [ A ] -> [ A ]
+mergesort : ∀ {A op} -> DecidableOrder op -> [ A ] -> [ A ]
 mergesort order xs = mergeAll' order $ map (flip _::_ []) xs
 
