@@ -69,8 +69,8 @@ merge_permutation {A = A} {len = succ len} order (x :: xs) (y :: ys) {eqSucc _}
 merge_permutation {len = zero} _ (_ :: _) _ {()}
 
 merge_permutation' :
-    ∀ {A op} -> (order : DecidableOrder op) ->
-    (xs ys : [ A ]) -> Permutation (xs ++ ys) (merge' order xs ys)
+    ∀ {A op} -> (order : DecidableOrder op) -> (xs ys : [ A ]) ->
+    Permutation (xs ++ ys) (merge' order xs ys)
 merge_permutation' order xs ys = merge_permutation order xs ys
 
 mergePair : {A : Set}{op : RelationOn A} ->
@@ -79,37 +79,24 @@ mergePair order [] = []
 mergePair order (x :: []) = x :: []
 mergePair order (x :: x' :: xs) = merge' order x x' :: mergePair order xs
 
-half : Nat -> Nat
-half zero = zero
-half (succ zero) = succ zero
-half (succ (succ n)) = succ $ half n
+<=mergePair : ∀ {A op}{order : DecidableOrder op}{l : [ [ A ] ]} ->
+              length (mergePair order l) <= length l
+<=mergePair {l = []} = <=zero
+<=mergePair {l = _ :: []} = <=succ <=zero
+<=mergePair {l = _ :: _ :: l} =
+    <=succ $ <=trans (<=mergePair {l = l}) <=reflSucc
 
-natLog2 : Nat -> Nat
-natLog2 zero = zero
-natLog2 (succ zero) = zero
-natLog2 n = succ $ natLog2 $ half n
-
-mergePair-half :
-    {A : Set}{op : RelationOn A}{order : DecidableOrder op}{l : [ [ A ] ]} ->
-    NatEq (half (length l)) (length (mergePair order l))
-mergePair-half {l = []} = eqZero
-mergePair-half {l = _ :: []} = eqSucc eqZero
-mergePair-half {l = _ :: _ :: l} = eqSucc $ mergePair-half {l = l}
-
-mergeAll :
-    ∀ {A op len} -> DecidableOrder op -> (xs : [ [ A ] ]) ->
-    {eq : NatEq len (natLog2 (length xs))} -> [ A ]
-mergeAll {len = zero} order [] = []
-mergeAll {len = zero} order (x :: []) = x
-mergeAll {len = succ len} order (x :: x' :: xs) {eqSucc eq} =
-    mergeAll {len = len} order (mergePair order (x :: x' :: xs))
-    {natEqTrans eq $ natEqRefl' (natLog2 ∘ succ) $ mergePair-half {l = xs}}
-mergeAll {len = zero} _ (_ :: _ :: _) {()}
-mergeAll {len = succ _} _ [] {()}
-mergeAll {len = succ _} _ (_ :: []) {()}
+mergeAll : ∀ {A op n} -> DecidableOrder op -> (l : [ [ A ] ]) ->
+           {rel : length l <= n} -> [ A ]
+mergeAll order [] = []
+mergeAll order (x :: []) = x
+mergeAll {n = succ n} order (x :: x' :: xs) {<=succ rel} =
+    mergeAll {n = n} order (mergePair order (x :: x' :: xs))
+    {<=trans (<=succ (<=mergePair {l = xs})) rel}
+mergeAll {n = zero} _ (_ :: _) {()}
 
 mergeAll' : ∀ {A op} -> DecidableOrder op -> [ [ A ] ] -> [ A ]
-mergeAll' order xs = mergeAll {len = natLog2 $ length xs} order xs {natEqRefl}
+mergeAll' order xs = mergeAll {n = length xs} order xs {<=refl}
 
 mergesort : ∀ {A op} -> DecidableOrder op -> [ A ] -> [ A ]
 mergesort order xs = mergeAll' order $ map (flip _::_ []) xs
