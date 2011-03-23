@@ -12,6 +12,7 @@ open import Relation.Order
 open import Relation.Order.Nat
 open import Relation.Permutation
 open import Group.Nat
+open import Group.List
 
 merge :
     ∀ {A op len} -> DecidableOrder op ->
@@ -58,7 +59,7 @@ merge_permutation :
     ∀ {A op len} -> (order : DecidableOrder op) ->
     (xs ys : [ A ]) -> {eq : len == (length xs + length ys)} ->
     Permutation (xs ++ ys) (merge order xs ys {eq})
-merge_permutation order [] ys = permRefl
+merge_permutation order [] ys = eqPerm ==refl
 merge_permutation {len = succ len} order (x :: xs) [] =
     permSkip $ merge order permutation xs []
 merge_permutation {A = A} {len = succ len} order (x :: xs) (y :: ys)
@@ -68,7 +69,7 @@ merge_permutation {A = A} {len = succ len} order (x :: xs) (y :: ys)
     merge_permutation {len = len} order (x :: xs) ys where
     move : {y : A}{xs ys : [ A ]} ->
            Permutation (xs ++ (y :: ys)) (y :: xs ++ ys)
-    move {xs = []} = permRefl
+    move {xs = []} = eqPerm ==refl
     move {xs = x :: xs} = permTrans (permSkip (move {xs = xs})) permSwap
 merge_permutation {len = zero} _ (_ :: _) _ {()}
 
@@ -102,9 +103,9 @@ mergePair_permutation :
     ∀ {A op} -> (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
     Permutation (concat l) (concat (mergePair order l))
 mergePair_permutation order [] = permNull
-mergePair_permutation order (x :: []) = permRefl
+mergePair_permutation order (x :: []) = eqPerm ==refl
 mergePair_permutation order (x :: x' :: xs) =
-    permTrans (permSym (permAppend' {xs = x}))
+    permTrans (eqPerm (++assoc {a = x}))
     (permAppend (merge_permutation order x x') (mergePair_permutation order xs))
 
 mergeAll : ∀ {A op n} -> DecidableOrder op -> (l : [ [ A ] ]) ->

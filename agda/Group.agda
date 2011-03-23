@@ -25,7 +25,9 @@ record Monoid {A : Set} (eq : RelationOn A) (add : BinOp A) (id : A) : Set where
         idleft : ∀ {a} -> eq (add id a) a
         idright : ∀ {a} -> eq (add a id) a
 
-record CMonoid {A : Set} (eq : RelationOn A) (add : BinOp A) (id : A) : Set where
+record CMonoid {A : Set} (eq : RelationOn A) (add : BinOp A) (id : A) :
+        Set where
     field
         base : Monoid eq add id
         comm : ∀ {a b} -> eq (add a b) (add b a)
+

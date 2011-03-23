@@ -27,14 +27,14 @@ open import Group
 +Semigroup =
     record {
         base = ==Equal;
-        assoc = (\{a} -> +assoc {a})
+        assoc = \{a} -> +assoc {a}
     }
 
 +CSemigroup : CSemigroup _==_ _+_
 +CSemigroup =
     record {
         base = +Semigroup;
-        comm = (\{a} -> +comm {a})
+        comm = \{a} -> +comm {a}
     }
 
 +Monoid : Monoid _==_ _+_ zero
@@ -49,5 +49,6 @@ open import Group
 +CMonoid =
     record {
         base = +Monoid;
-        comm = (\{a} -> +comm {a})
+        comm = \{a} -> +comm {a}
     }
+
