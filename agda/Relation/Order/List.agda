@@ -87,4 +87,3 @@ ListDecidableOrder {A} op elemord =
         orLeft $ consOrder x<=y $ orLeft !y<=x
     ... | orRight !x<=y | _ | _ = orRight $ !x<=y ∘ andLeft ∘ unconsOrder
 
-

@@ -44,3 +44,4 @@ permAppend : ∀ {A}{xs xs' ys ys' : [ A ]} ->
              Permutation (xs ++ ys) (xs' ++ ys')
 permAppend {xs = xs} {xs'} p1 p2 =
     permTrans (permAppendX {xs = xs} p1) (permAppendY {xs = xs'} p2)
+

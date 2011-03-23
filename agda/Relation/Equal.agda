@@ -20,3 +20,4 @@ record Equal {A : Set} (eq : RelationOn A) : Set where
 
 ==Equal : {A : Set} -> Equal {A} _==_
 ==Equal {A} = record { refl = ==refl; sym = ==sym; trans = ==trans}
+
