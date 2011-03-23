@@ -1,8 +1,6 @@
 
 module Group where
 
-open import Logic
-open import Function
 open import Relation
 open import Relation.Equal
 

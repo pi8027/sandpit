@@ -5,13 +5,11 @@ open import Logic
 open import Function
 open import Data.Nat
 open import Data.List
-open import Relation
 open import Relation.Equal
 open import Relation.Equal.Nat
 open import Relation.Order
 open import Relation.Order.Nat
 open import Relation.Permutation
-open import Group.Nat
 open import Group.List
 
 merge :

@@ -2,7 +2,6 @@
 module Data.List where
 
 open import Function
-open import Logic
 open import Data.Nat
 open import Relation
 open import Relation.Order

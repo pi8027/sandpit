@@ -2,7 +2,6 @@
 module Relation.Equal.List where
 
 open import Data.List
-open import Relation
 open import Relation.Equal
 
 ==cons : ∀ {A}{x y : A}{xs ys : [ A ]} ->

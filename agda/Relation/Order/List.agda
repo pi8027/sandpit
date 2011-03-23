@@ -3,7 +3,7 @@ module Relation.Order.List where
 
 open import Function
 open import Logic
-open import Data.Nat
+open import Data.List
 open import Relation
 open import Relation.Order
 
