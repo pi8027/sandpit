@@ -1,17 +1,11 @@
 
-module Nat where
+module Relation.Order.Nat where
 
-open import Logic
 open import Function
+open import Logic
+open import Data.Nat
 open import Relation
-
-data Nat : Set where
-    zero : Nat
-    succ : Nat -> Nat
-
-_+_ : Nat -> Nat -> Nat
-zero + b = b
-succ a + b = succ $ a + b
+open import Relation.Order
 
 data _<=_ : RelationOn Nat where
     <=zero : ∀ {n} -> zero <= n
@@ -53,21 +47,4 @@ data _<=_ : RelationOn Nat where
 <=reflSucc : ∀ {i} -> i <= succ i
 <=reflSucc {zero} = <=zero
 <=reflSucc {succ _} = <=succ <=reflSucc
-
-data NatEq : RelationOn Nat where
-    eqZero : NatEq zero zero
-    eqSucc : ∀ {m n} -> NatEq m n -> NatEq (succ m) (succ n)
-
-natEqRefl : ∀ {i} -> NatEq i i
-natEqRefl {zero} = eqZero
-natEqRefl {succ a} = eqSucc $ natEqRefl {a}
-
-natEqTrans : ∀ {a b c} -> NatEq a b -> NatEq b c -> NatEq a c
-natEqTrans eqZero eqZero = eqZero
-natEqTrans (eqSucc a) (eqSucc b) = eqSucc $ natEqTrans a b
-
-succAREq : ∀ {a a' b b'} ->
-           NatEq a a' -> NatEq b b' -> NatEq (a + succ b) (succ (a' + b'))
-succAREq eqZero eq = eqSucc eq
-succAREq (eqSucc eq1) eq2 = eqSucc $ succAREq eq1 eq2
 

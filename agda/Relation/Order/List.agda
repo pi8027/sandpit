@@ -1,16 +1,11 @@
 
-module List where
+module Relation.Order.List where
 
 open import Function
 open import Logic
+open import Data.Nat
 open import Relation
-open import Nat
-
-infixr 40 _::_
-
-data [_] (A : Set) : Set where
-    []   : [ A ]
-    _::_ : A -> [ A ] -> [ A ]
+open import Relation.Order
 
 data LeqList {A : Set} (op : RelationOn A) : RelationOn [ A ] where
     nullIsMinimal : ∀ {l} -> LeqList op [] l
@@ -92,24 +87,4 @@ ListDecidableOrder {A} op elemord =
         orLeft $ consOrder x<=y $ orLeft !y<=x
     ... | orRight !x<=y | _ | _ = orRight $ !x<=y ∘ andLeft ∘ unconsOrder
 
-length : ∀ {A} -> [ A ] -> Nat
-length [] = zero
-length (_ :: xs) = succ $ length xs
-
-_++_ : ∀ {A} -> [ A ] -> [ A ] -> [ A ]
-[] ++ ys = ys
-(x :: xs) ++ ys = x :: (xs ++ ys)
-
-foldr : ∀ {A B} -> (A -> B -> B) -> B -> [ A ] -> B
-foldr f b [] = b
-foldr f b (x :: xs) = f x $ foldr f b xs
-
-foldl : ∀ {A B} -> (A -> B -> A) -> A -> [ B ] -> A
-foldl f b [] = b
-foldl f b (x :: xs) = foldl f (f b x) xs
-
-map : ∀ {A B} -> (A -> B) -> [ A ] -> [ B ]
-map f = foldr (_::_ ∘ f) []
-reverse : ∀ {A} -> [ A ] -> [ A ]
-reverse = foldl (flip _::_) []
 
