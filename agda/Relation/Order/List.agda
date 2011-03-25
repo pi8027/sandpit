@@ -16,11 +16,6 @@ data LeqList {i : Level} {A : Set i} (op : RelationOn A) :
     consOrder : ∀ {x y xs ys} -> op x y -> (¬ op y x) ∨ LeqList op xs ys ->
                 LeqList op (x :: xs) (y :: ys)
 
-unconsOrder : ∀ {i : Level}{A : Set i}{op : RelationOn A}{x xs y ys} ->
-              LeqList op (x :: xs) (y :: ys) ->
-              op x y ∧ ((¬ op y x) ∨ LeqList op xs ys)
-unconsOrder (consOrder a b) = record {l = a ; r = b}
-
 ListOrder : ∀ {i}{A : Set i} ->
             (op : RelationOn A) -> Order op -> Order (LeqList op)
 ListOrder op elemord = record { refl = listRefl ; trans = listTrans } where
@@ -72,7 +67,7 @@ ListTotalOrder {A = A} op elemord =
 ListDecidableOrder : ∀ {i}{A : Set i} -> (op : RelationOn A) ->
                      DecidableOrder op -> DecidableOrder (LeqList op)
 ListDecidableOrder {A = A} op elemord =
-    record { base = ListTotalOrder op elemord ; decide = listDecide } where
+    record { base = ListTotalOrder op elemord; decide = listDecide } where
 
     elemdecide : (a b : A) -> op a b ∨ (¬ op a b)
     elemdecide = DecidableOrder.decide elemord
