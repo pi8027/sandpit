@@ -1,36 +1,40 @@
 
+{-# OPTIONS --universe-polymorphism #-}
+
 module Logic where
 
+open import Level
 open import Function
 
-data False : Set where
+data ⊥ : Set where
 
-False-elim : {A : Set} -> False -> A
-False-elim ()
+⊥-elim : ∀ {a}{A : Set a} -> ⊥ -> A
+⊥-elim ()
 
-¬_ : Set -> Set
-¬ A = A -> False
+¬_ : ∀ {a} -> Set a -> Set a
+¬ A = A -> ⊥
 
-data _∨_ (Left Right : Set) : Set where
-    orLeft : Left -> Left ∨ Right
-    orRight : Right -> Left ∨ Right
+data _∨_ {a : Level} (A B : Set a) : Set a where
+    orLeft : A -> A ∨ B
+    orRight : B -> A ∨ B
 
-record _∧_ (Left Right : Set) : Set where
+record _∧_ {a : Level} (A B : Set a) : Set a where
     field
-        l : Left
-        r : Right
+        l : A
+        r : B
 
-andLeft : ∀ {Left Right} -> Left ∧ Right -> Left
+orMerge : ∀ {a b}{A B : Set a}{C : Set b} ->
+          (A -> C) -> (B -> C) -> A ∨ B -> C
+orMerge f g (orLeft a) = f a
+orMerge f g (orRight b) = g b
+
+orMap : ∀ {a}{A B C D : Set a} ->
+        (A -> C) -> (B -> D) -> A ∨ B -> C ∨ D
+orMap f g = orMerge (orLeft ∘ f) (orRight ∘ g)
+
+andLeft : ∀ {a}{A B : Set a} -> A ∧ B -> A
 andLeft = _∧_.l
 
-andRight : ∀ {Left Right} -> Left ∧ Right -> Right
+andRight : ∀ {a}{A B : Set a} -> A ∧ B -> B
 andRight = _∧_.r
-
-orMerge : ∀ {Left Right A} ->
-    (Left -> A) -> (Right -> A) -> Left ∨ Right -> A
-orMerge lf _ (orLeft left) = lf left
-orMerge _ rf (orRight right) = rf right
-
-orMap : ∀ {L L' R R'} -> (L -> L') -> (R -> R') -> L ∨ R -> L' ∨ R'
-orMap f g = orMerge (orLeft ∘ f) (orRight ∘ g)
 

@@ -1,35 +1,38 @@
 
+{-# OPTIONS --universe-polymorphism #-}
+
 module Relation.Order.List where
 
+open import Level
 open import Function
 open import Logic
+open import Types
 open import Data.List
-open import Relation
 open import Relation.Order
 
-data LeqList {A : Set} (op : RelationOn A) : RelationOn [ A ] where
+data LeqList {i : Level} {A : Set i} (op : RelationOn A) :
+             RelationOn [ A ] where
     nullIsMinimal : ∀ {l} -> LeqList op [] l
     consOrder : ∀ {x y xs ys} -> op x y -> (¬ op y x) ∨ LeqList op xs ys ->
                 LeqList op (x :: xs) (y :: ys)
 
-unconsOrder : ∀ {A : Set}{op : RelationOn A}{x xs y ys} ->
+unconsOrder : ∀ {i : Level}{A : Set i}{op : RelationOn A}{x xs y ys} ->
               LeqList op (x :: xs) (y :: ys) ->
               op x y ∧ ((¬ op y x) ∨ LeqList op xs ys)
 unconsOrder (consOrder a b) = record {l = a ; r = b}
 
-ListOrder : {A : Set} ->
+ListOrder : ∀ {i}{A : Set i} ->
             (op : RelationOn A) -> Order op -> Order (LeqList op)
 ListOrder op elemord = record { refl = listRefl ; trans = listTrans } where
 
     elemtrans : ∀ {a b c} -> op a b -> op b c -> op a c
     elemtrans = Order.trans elemord
 
-    listRefl : ∀ {i} -> LeqList op i i
+    listRefl : ∀ {a} -> LeqList op a a
     listRefl {[]} = nullIsMinimal
     listRefl {x :: xs} = consOrder (Order.refl elemord) (orRight listRefl)
 
-    listTrans : ∀ {a b c} ->
-        LeqList op a b -> LeqList op b c -> LeqList op a c
+    listTrans : ∀ {a b c} -> LeqList op a b -> LeqList op b c -> LeqList op a c
     listTrans {a = []} _ _ = nullIsMinimal
     listTrans {a = _ :: _} {b = []} () p2
     listTrans {b = _ :: _} {c = []} p1 ()
@@ -40,14 +43,16 @@ ListOrder op elemord = record { refl = listRefl ; trans = listTrans } where
     listTrans (consOrder p1 (orRight p2)) (consOrder p3 (orRight p4)) =
         consOrder (elemtrans p1 p3) (orRight (listTrans p2 p4))
 
-ListTotalOrder : {A : Set} -> (op : RelationOn A) ->
+ListTotalOrder : ∀ {i}{A : Set i} -> (op : RelationOn A) ->
                  DecidableOrder op -> TotalOrder (LeqList op)
-ListTotalOrder {A} op elemord =
-    record { base = ListOrder op $ TotalOrder.base $ DecidableOrder.base elemord
-           ; total = listTotal } where
+ListTotalOrder {A = A} op elemord =
+    record {
+        base = ListOrder op $ TotalOrder.base $ DecidableOrder.base elemord;
+        total = listTotal
+    } where
 
     elemtotal : ∀ {a b} -> op a b ∨ op b a
-    elemtotal = TotalOrder.total $ DecidableOrder.base elemord
+    elemtotal {a} {b} = TotalOrder.total (DecidableOrder.base elemord) {a} {b}
 
     elemdecide : (a b : A) -> op a b ∨ (¬ op a b)
     elemdecide = DecidableOrder.decide elemord
@@ -62,11 +67,11 @@ ListTotalOrder {A} op elemord =
     ... | orLeft x<=y | orRight !y<=x = orLeft $ consOrder x<=y $ orLeft !y<=x
     ... | orRight !x<=y | orLeft y<=x = orRight $ consOrder y<=x $ orLeft !x<=y
     ... | orRight !x<=y | orRight !y<=x =
-        False-elim $ orMerge !x<=y !y<=x elemtotal
+        ⊥-elim $ orMerge !x<=y !y<=x elemtotal
 
-ListDecidableOrder : {A : Set} -> (op : RelationOn A) ->
+ListDecidableOrder : ∀ {i}{A : Set i} -> (op : RelationOn A) ->
                      DecidableOrder op -> DecidableOrder (LeqList op)
-ListDecidableOrder {A} op elemord =
+ListDecidableOrder {A = A} op elemord =
     record { base = ListTotalOrder op elemord ; decide = listDecide } where
 
     elemdecide : (a b : A) -> op a b ∨ (¬ op a b)
@@ -81,9 +86,13 @@ ListDecidableOrder {A} op elemord =
         with elemdecide x y | elemdecide y x | listDecide xs ys
     ... | orLeft x<=y | orLeft y<=x | orLeft xs<=ys =
         orLeft $ consOrder x<=y $ orRight xs<=ys
-    ... | orLeft x<=y | orLeft y<=x | orRight !xs<=ys =
-        orRight $ orMerge (flip id y<=x) !xs<=ys ∘ andRight ∘ unconsOrder
+    ... | orLeft x<=y | orLeft y<=x | orRight !xs<=ys = orRight p where
+        p : LeqList op (x :: xs) (y :: ys) -> ⊥
+        p (consOrder _ (orLeft !y<=x)) = !y<=x y<=x
+        p (consOrder _ (orRight xs<=ys)) = !xs<=ys xs<=ys
     ... | orLeft x<=y | orRight !y<=x | _ =
         orLeft $ consOrder x<=y $ orLeft !y<=x
-    ... | orRight !x<=y | _ | _ = orRight $ !x<=y ∘ andLeft ∘ unconsOrder
+    ... | orRight !x<=y | _ | _ = orRight p where
+        p : LeqList op (x :: xs) (y :: ys) -> ⊥
+        p (consOrder x<=y _) = !x<=y x<=y
 

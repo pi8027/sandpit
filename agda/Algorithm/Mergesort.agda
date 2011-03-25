@@ -1,10 +1,14 @@
 
+{-# OPTIONS --universe-polymorphism #-}
+
 module Algorithm.Mergesort where
 
 open import Logic
 open import Function
+open import Types
 open import Data.Nat
 open import Data.List
+open import Data.TList
 open import Relation.Equal
 open import Relation.Equal.Nat
 open import Relation.Equal.List
@@ -13,9 +17,9 @@ open import Relation.Order.Nat
 open import Relation.Permutation
 open import Group.List
 
-merge :
-    ∀ {A op len} -> DecidableOrder op ->
-    (xs ys : [ A ]) -> {eq : len == (length xs + length ys)} -> [ A ]
+merge : ∀ {i}{A : Set i}{op : RelationOn A}{len : Nat} ->
+        DecidableOrder op -> (xs ys : [ A ]) ->
+        {eq : len == (length xs + length ys)} -> [ A ]
 merge order [] ys = ys
 merge {len = succ len} order (x :: xs) [] {eq} =
     x :: merge {len = len} order xs [] {==desucc eq}
@@ -26,12 +30,14 @@ merge {len = succ len} order (x :: xs) (y :: ys) {eq}
     {==trans (==desucc eq) (==sym (addSuccReflexive {length xs}))}
 merge {len = zero} _ (_ :: _) _ {()}
 
-merge' : ∀ {A op} -> DecidableOrder op -> [ A ] -> [ A ] -> [ A ]
+merge' : ∀ {i}{A : Set i}{op : RelationOn A} ->
+         DecidableOrder op -> [ A ] -> [ A ] -> [ A ]
 merge' order xs ys = merge {len = length xs + length ys} order xs ys {==refl}
 
 merge-ordered :
-    ∀ {A op b len} -> (order : DecidableOrder op) ->
-    (xs ys : [ A ]) -> Ordered order b xs -> Ordered order b ys ->
+    ∀ {i}{A : Set i}{op : RelationOn A}{b : A}{len : Nat} ->
+    (order : DecidableOrder op) -> (xs ys : [ A ]) ->
+    Ordered order b xs -> Ordered order b ys ->
     {eq : len == (length xs + length ys)} ->
     Ordered order b (merge order xs ys {eq})
 merge-ordered _ [] _ _ p2 = p2
@@ -48,14 +54,16 @@ merge-ordered {len = succ len} order (x :: xs) (y :: ys)
 merge-ordered {len = zero} _ (_ :: _) _ _ _ {()}
 
 merge-ordered' :
-    ∀ {A op b} -> (order : DecidableOrder op) ->
-    (xs ys : [ A ]) -> Ordered order b xs -> Ordered order b ys ->
+    ∀ {i}{A : Set i}{op : RelationOn A}{b : A} ->
+    (order : DecidableOrder op) -> (xs ys : [ A ]) ->
+    Ordered order b xs -> Ordered order b ys ->
     Ordered order b (merge' order xs ys)
 merge-ordered' order xs ys ox oy = merge-ordered order xs ys ox oy
 
 merge-permutation :
-    ∀ {A op len} -> (order : DecidableOrder op) ->
-    (xs ys : [ A ]) -> {eq : len == (length xs + length ys)} ->
+    ∀ {i}{A : Set i}{op : RelationOn A}{len : Nat} ->
+    (order : DecidableOrder op) -> (xs ys : [ A ]) ->
+    {eq : len == (length xs + length ys)} ->
     Permutation (xs ++ ys) (merge order xs ys {eq})
 merge-permutation order [] ys = eqPerm ==refl
 merge-permutation {len = succ len} order (x :: xs) [] =
@@ -72,33 +80,37 @@ merge-permutation {A = A} {len = succ len} order (x :: xs) (y :: ys)
 merge-permutation {len = zero} _ (_ :: _) _ {()}
 
 merge-permutation' :
-    ∀ {A op} -> (order : DecidableOrder op) -> (xs ys : [ A ]) ->
+    ∀ {i}{A : Set i}{op : RelationOn A} ->
+    (order : DecidableOrder op) -> (xs ys : [ A ]) ->
     Permutation (xs ++ ys) (merge' order xs ys)
 merge-permutation' order xs ys = merge-permutation order xs ys
 
-mergePair : ∀ {A op} -> DecidableOrder op -> [ [ A ] ] -> [ [ A ] ]
+mergePair : ∀ {i}{A : Set i}{op : RelationOn A} ->
+            DecidableOrder op -> [ [ A ] ] -> [ [ A ] ]
 mergePair order [] = []
 mergePair order (x :: []) = x :: []
 mergePair order (x :: x' :: xs) = merge' order x x' :: mergePair order xs
 
-<=mergePair : ∀ {A op}{order : DecidableOrder op}{l : [ [ A ] ]} ->
-              length (mergePair order l) <= length l
-<=mergePair {l = []} = <=zero
-<=mergePair {l = _ :: []} = <=succ <=zero
-<=mergePair {l = _ :: _ :: l} =
-    <=succ $ <=trans (<=mergePair {l = l}) <=reflSucc
+<=mergePair :
+    ∀ {i}{A : Set i}{op : RelationOn A}{order : DecidableOrder op} ->
+    (l : [ [ A ] ]) -> length (mergePair order l) <= length l
+<=mergePair [] = <=zero
+<=mergePair (_ :: []) = <=succ <=zero
+<=mergePair (_ :: _ :: l) = <=succ $ <=trans (<=mergePair l) <=reflSucc
 
 mergePair-ordered :
-    ∀ {A op b} -> (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
-    Sequence (Ordered order b) l ->
-    Sequence (Ordered order b) (mergePair order l)
-mergePair-ordered order [] nullSeq = nullSeq
-mergePair-ordered order (x :: []) (consSeq p nullSeq) = consSeq p nullSeq
-mergePair-ordered order (x :: x' :: xs) (consSeq p (consSeq p' p'')) =
-    consSeq (merge-ordered' order x x' p p') (mergePair-ordered order xs p'')
+    ∀ {i}{A : Set i}{op : RelationOn A}{b : A} ->
+    (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
+    TList (map (Ordered order b) l) ->
+    TList (map (Ordered order b) (mergePair order l))
+mergePair-ordered order [] [*] = [*]
+mergePair-ordered order (x :: []) (p :*: nullSeq) = p :*: nullSeq
+mergePair-ordered order (x :: x' :: xs) (p :*: p' :*: p'') =
+    merge-ordered' order x x' p p' :*: mergePair-ordered order xs p''
 
 mergePair-permutation :
-    ∀ {A op} -> (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
+    ∀ {i}{A : Set i}{op : RelationOn A} ->
+    (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
     Permutation (concat l) (concat (mergePair order l))
 mergePair-permutation order [] = permNull
 mergePair-permutation order (x :: []) = eqPerm ==refl
@@ -106,37 +118,42 @@ mergePair-permutation order (x :: x' :: xs) =
     permTrans (eqPerm (++assoc {a = x}))
     (permAppend (merge-permutation order x x') (mergePair-permutation order xs))
 
-mergeAll : ∀ {A op n} -> DecidableOrder op -> (l : [ [ A ] ]) ->
-           {rel : length l <= n} -> [ A ]
+mergeAll :
+    ∀ {i}{A : Set i}{op : RelationOn A}{n : Nat} ->
+    DecidableOrder op -> (l : [ [ A ] ]) -> {rel : length l <= n} -> [ A ]
 mergeAll order [] = []
 mergeAll order (x :: []) = x
 mergeAll {n = succ n} order (x :: x' :: xs) {<=succ rel} =
     mergeAll {n = n} order (mergePair order (x :: x' :: xs))
-    {<=trans (<=succ (<=mergePair {l = xs})) rel}
+    {<=trans (<=succ (<=mergePair xs)) rel}
 mergeAll {n = zero} _ (_ :: _) {()}
 
-mergeAll' : ∀ {A op} -> DecidableOrder op -> [ [ A ] ] -> [ A ]
+mergeAll' : ∀ {i}{A : Set i}{op : RelationOn A} ->
+            DecidableOrder op -> [ [ A ] ] -> [ A ]
 mergeAll' order xs = mergeAll {n = length xs} order xs {<=refl}
 
 mergeAll-ordered :
-    ∀ {A op b n} -> (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
-    {rel : length l <= n} -> Sequence (Ordered order b) l ->
+    ∀ {i}{A : Set i}{op : RelationOn A}{b : A}{n : Nat} ->
+    (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
+    {rel : length l <= n} -> TList (map (Ordered order b) l) ->
     Ordered order b (mergeAll order l {rel})
-mergeAll-ordered order [] nullSeq = orderedNull
-mergeAll-ordered order (x :: []) (consSeq p _) = p
+mergeAll-ordered order [] [*] = orderedNull
+mergeAll-ordered order (x :: []) (p :*: _) = p
 mergeAll-ordered {n = succ n} order (x :: x' :: xs) {<=succ rel} ordseq =
     mergeAll-ordered {n = n} order (mergePair order (x :: x' :: xs))
         (mergePair-ordered order (x :: x' :: xs) ordseq)
 mergeAll-ordered {n = zero} _ (_ :: _) {()} _
 
 mergeAll-ordered' :
-    ∀ {A op b} -> (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
-    Sequence (Ordered order b) l -> Ordered order b (mergeAll' order l)
+    ∀ {i}{A : Set i}{op : RelationOn A}{b : A} ->
+    (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
+    TList (map (Ordered order b) l) -> Ordered order b (mergeAll' order l)
 mergeAll-ordered' order l ordseq =
     mergeAll-ordered {n = length l} order l {<=refl} ordseq
 
 mergeAll-permutation :
-    ∀ {A op n} -> (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
+    ∀ {i}{A : Set i}{op : RelationOn A}{n : Nat} ->
+    (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
     {rel : length l <= n} -> Permutation (concat l) (mergeAll order l {rel})
 mergeAll-permutation order [] = permNull
 mergeAll-permutation order (x :: []) = eqPerm ++idright
@@ -146,32 +163,35 @@ mergeAll-permutation {n = succ n} order (x :: x' :: xs) {<=succ rel} =
 mergeAll-permutation {n = zero} _ (_ :: _) {()}
 
 mergeAll-permutation' :
-    ∀ {A op} -> (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
+    ∀ {i}{A : Set i}{op : RelationOn A} ->
+    (order : DecidableOrder op) -> (l : [ [ A ] ]) ->
     Permutation (concat l) (mergeAll' order l)
 mergeAll-permutation' order l =
     mergeAll-permutation {n = length l} order l {<=refl}
 
-mergesort : ∀ {A op} -> DecidableOrder op -> [ A ] -> [ A ]
+mergesort : ∀ {i}{A : Set i}{op : RelationOn A} ->
+            DecidableOrder op -> [ A ] -> [ A ]
 mergesort order xs = mergeAll' order $ map (flip _::_ []) xs
 
 mergesort-ordered :
-    ∀ {A op b} -> (order : DecidableOrder op) -> (l : [ A ]) ->
-    Sequence (op b) l -> Ordered order b (mergesort order l)
-mergesort-ordered {A} {op} {b} order l ps =
+    ∀ {i}{A : Set i}{op : RelationOn A}{b : A} ->
+    (order : DecidableOrder op) -> (l : [ A ]) ->
+    TList (map (op b) l) -> Ordered order b (mergesort order l)
+mergesort-ordered {A = A} {op} {b} order l ps =
     mergeAll-ordered' order (map (flip _::_ []) l) (p l ps) where
-    p : (l : [ A ]) -> Sequence (op b) l ->
-        Sequence (Ordered order b) (map (flip _::_ []) l)
-    p [] nullSeq = nullSeq
-    p (x :: xs) (consSeq p1 p2) =
-        consSeq (orderedCons x p1 orderedNull) (p xs p2)
+    p : (l : [ A ]) -> TList (map (op b) l) ->
+        TList (map (Ordered order b) (map (flip _::_ []) l))
+    p [] [*] = [*]
+    p (x :: xs) (p1 :*: p2) = orderedCons x p1 orderedNull :*: p xs p2
 
 mergesort-permutation :
-    ∀ {A op} -> (order : DecidableOrder op) -> (l : [ A ]) ->
+    ∀ {i}{A : Set i}{op : RelationOn A} ->
+    (order : DecidableOrder op) -> (l : [ A ]) ->
     Permutation l (mergesort order l)
 mergesort-permutation order l =
     permTrans (eqPerm p) (mergeAll-permutation' order (map (flip _::_ []) l))
     where
     p : ∀ {l} -> l == concat (map (flip _::_ []) l)
     p {[]} = ==refl
-    p {x :: xs} = ==cons ==refl $ p {xs}
+    p {x :: xs} = ==apply'' _::_ ==refl $ p {xs}
 

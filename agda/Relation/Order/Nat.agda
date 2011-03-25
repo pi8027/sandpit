@@ -1,10 +1,13 @@
 
+{-# OPTIONS --universe-polymorphism #-}
+
 module Relation.Order.Nat where
 
+open import Level
 open import Function
 open import Logic
+open import Types
 open import Data.Nat
-open import Relation
 open import Relation.Order
 
 data _<=_ : RelationOn Nat where
@@ -36,13 +39,13 @@ data _<=_ : RelationOn Nat where
     orMap <=succ (flip _∘_ <=unsucc) $ <=decide a b
 
 <=Order : Order _<=_
-<=Order = record { refl = <=refl ; trans = <=trans }
+<=Order = record { refl = <=refl; trans = <=trans }
 
 <=TotalOrder : TotalOrder _<=_
-<=TotalOrder = record { base = <=Order ; total = <=total }
+<=TotalOrder = record { base = <=Order; total = <=total }
 
 <=DecidableOrder : DecidableOrder _<=_
-<=DecidableOrder = record { base = <=TotalOrder ; decide = <=decide }
+<=DecidableOrder = record { base = <=TotalOrder; decide = <=decide }
 
 <=reflSucc : ∀ {i} -> i <= succ i
 <=reflSucc {zero} = <=zero
