@@ -25,11 +25,11 @@ record DecidableOrder {i : Level} {A : Set i} (op : RelationOn A) : Set i where
 
 trichotomy : ∀ {i : Level}{A : Set i}{op : RelationOn A}{a b : A} ->
              TotalOrder op -> ¬ (op b a) -> op a b
-trichotomy {a = a} {b} ord !b<=a with TotalOrder.total ord {a} {b}
-... | orLeft a<=b = a<=b
-... | orRight b<=a = ⊥-elim $ !b<=a b<=a
+trichotomy {a = a} {b} ord !b≤a with TotalOrder.total ord {a} {b}
+... | orLeft a≤b = a≤b
+... | orRight b≤a = ⊥-elim $ !b≤a b≤a
 
 trichotomy' : ∀ {i : Level}{A : Set i}{op : RelationOn A}{a b : A} ->
               DecidableOrder op -> ¬ op b a -> op a b
-trichotomy' order !b<=a = trichotomy (DecidableOrder.base order) !b<=a
+trichotomy' order !b≤a = trichotomy (DecidableOrder.base order) !b≤a
 
