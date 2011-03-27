@@ -36,7 +36,7 @@ data _≤_ : RelationOn Nat where
     f : ¬ (succ a ≤ zero)
     f ()
 ≤decide (succ a) (succ b) =
-    orMap ≤succ (flip _∘_ ≤unsucc) $ ≤decide a b
+    orMap ≤succ (\ !a≤b -> !a≤b ∘ ≤unsucc) $ ≤decide a b
 
 ≤Order : Order _≤_
 ≤Order = record { refl = ≤refl; trans = ≤trans }
