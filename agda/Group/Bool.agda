@@ -5,7 +5,7 @@ module Group.Bool where
 
 open import Data.Bool
 open import Group
-open import Relation.Equal
+open import Relation.Binary.Equal
 
 &&assoc : ∀ {a b c} → (a && (b && c)) ≡ ((a && b) && c)
 &&assoc {false} = ≡refl
@@ -25,33 +25,16 @@ open import Relation.Equal
 &&idright {true} = ≡refl 
 
 &&Semigroup : Semigroup _≡_ _&&_
-&&Semigroup =
-    record {
-        base = ≡Equal;
-        assoc = \{a} → &&assoc {a}
-    }
+&&Semigroup = semigroup ≡Equal (\{a} → &&assoc {a})
 
 &&CSemigroup : CSemigroup _≡_ _&&_
-&&CSemigroup =
-    record {
-        base = &&Semigroup;
-        comm = \{a} → &&comm {a}
-    }
+&&CSemigroup = csemigroup &&Semigroup (\{a} → &&comm {a})
 
 &&Monoid : Monoid _≡_ _&&_ true
-&&Monoid =
-    record {
-        base = &&Semigroup;
-        idleft = &&idleft;
-        idright = &&idright
-    }
+&&Monoid = monoid &&Semigroup &&idleft &&idright
 
 &&CMonoid : CMonoid _≡_ _&&_ true
-&&CMonoid =
-    record {
-        base = &&Monoid;
-        comm = \{a} → &&comm {a}
-    }
+&&CMonoid = cmonoid &&Monoid (\{a} → &&comm {a})
 
 ||assoc : ∀ {a b c} → (a || (b || c)) ≡ ((a || b) || c)
 ||assoc {false} = ≡refl
@@ -71,31 +54,14 @@ open import Relation.Equal
 ||idright {true} = ≡refl
 
 ||Semigroup : Semigroup _≡_ _||_
-||Semigroup =
-    record {
-        base = ≡Equal;
-        assoc = \{a} → ||assoc {a}
-    }
+||Semigroup = semigroup ≡Equal (\{a} → ||assoc {a})
 
 ||CSemigroup : CSemigroup _≡_ _||_
-||CSemigroup =
-    record {
-        base = ||Semigroup;
-        comm = \{a} → ||comm {a}
-    }
+||CSemigroup = csemigroup ||Semigroup (\{a} → ||comm {a})
 
 ||Monoid : Monoid _≡_ _||_ false
-||Monoid =
-    record {
-        base = ||Semigroup;
-        idleft = ||idleft;
-        idright = ||idright
-    }
+||Monoid = monoid ||Semigroup ||idleft ||idright
 
 ||CMonoid : CMonoid _≡_ _||_ false
-||CMonoid =
-    record {
-        base = ||Monoid;
-        comm = \{a} → ||comm {a}
-    }
+||CMonoid = cmonoid ||Monoid (\{a} → ||comm {a})
 

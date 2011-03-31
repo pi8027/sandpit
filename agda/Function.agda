@@ -5,7 +5,7 @@ module Function where
 
 open import Level
 
-id : ∀ {a}{A : Set a} → A → A
+id : ∀ {a} {A : Set a} → A → A
 id a = a
 
 infixr 10 _$_
