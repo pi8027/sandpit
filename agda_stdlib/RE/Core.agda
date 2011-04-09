@@ -42,6 +42,9 @@ data REMatch {a ℓ₁} {A : Set a} (_≈_ : Rel A ℓ₁) :
         All (REMatch _≈_ re) strList → All (λ l → ¬ ListEmpty l) strList →
         REMatch _≈_ (reSequence re) (concat strList)
 
+eqTyping : ∀ {t} {T1 T2 : Set t} → T1 ≡ T2 → T1 → T2
+eqTyping refl a = a
+
 anyMap⁺ : ∀ {a b p} {A : Set a} {B : Set b} {P : B → Set p}
           {f : A → B} {xs} → Any (P ∘ f) xs → Any P (Data.List.map f xs)
 anyMap⁺ (here p) = here p
@@ -119,11 +122,13 @@ match {A = A} {_≈_} dec (reJoin re1 re2) str =
         Any (λ s → REMatch _≈_ re1 (proj₁ s) × REMatch _≈_ re2 (proj₂ s)) l →
         REMatch _≈_ (reJoin re1 re2) str
     f [] _ ()
-    f (x ∷ _) (p1 ∷ _) (here (p2 , p3)) = {!!}
+    f ((ls , rs) ∷ _) (p1 ∷ _) (here (p2 , p3)) = eqTyping
+        (cong (REMatch _≈_ (reJoin re1 re2)) (sym p1)) (reMatchJoin p2 p3)
     f (_ ∷ xs) (_ ∷ p1) (there p2) = f xs p1 p2
-    g : All (λ s → ¬ (REMatch _≈_ re1 (proj₁ s) × REMatch _≈_ re2 (proj₂ s))) (split str) →
+    g : All (λ s → ¬ (REMatch _≈_ re1 (proj₁ s) × REMatch _≈_ re2 (proj₂ s)))
+            (split str) →
         ¬ REMatch _≈_ (reJoin re1 re2) str
-    g p1 p2 = {!!}
+    g p1 p2 = ?
 match {_≈_ = _≈_} dec (reUnion re1 re2) str
         with match dec re1 str | match dec re2 str
 ... | yes p | _ = yes $ reMatchUnionLeft p
