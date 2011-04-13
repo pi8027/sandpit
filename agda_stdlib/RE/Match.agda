@@ -37,7 +37,7 @@ match {A = A} {_≈_} dec (reJoin re1 re2) str =
     [ yes ∘ f (split str) (appendInvSplit str) , no ∘ flip (anyYesAllNo ∘ g) ]′
         (anyYesOrAllNo joindec (split str)) where
     joindec : (s : List A × List A) →
-           Dec (REMatch _≈_ re1 (proj₁ s) × REMatch _≈_ re2 (proj₂ s))
+              Dec (REMatch _≈_ re1 (proj₁ s) × REMatch _≈_ re2 (proj₂ s))
     joindec (ls , rs) with match dec re1 ls | match dec re2 rs
     ... | yes p1 | yes p2 = yes $ p1 , p2
     ... | no p | _ = no $ p ∘ proj₁
@@ -49,17 +49,16 @@ match {A = A} {_≈_} dec (reJoin re1 re2) str =
     f ((ls , rs) ∷ _) (p1 ∷ _) (here (p2 , p3)) = eqTyping
         (cong (REMatch _≈_ (reJoin re1 re2)) (sym p1)) (reMatchJoin p2 p3)
     f (_ ∷ xs) (_ ∷ p1) (there p2) = f xs p1 p2
-    g : ∀ {ℓ} {re1 re2 : RE A} {_≈_ : Rel A ℓ} {str : List A} →
-        REMatch _≈_ (reJoin re1 re2) str →
-        Any (λ s → (REMatch _≈_ re1 (proj₁ s) × REMatch _≈_ re2 (proj₂ s)))
+    g : {str : List A} → REMatch _≈_ (reJoin re1 re2) str →
+        Any (λ s → REMatch _≈_ re1 (proj₁ s) × REMatch _≈_ re2 (proj₂ s))
             (split str)
-    g {ℓ} {re1} {re2} {_≈_} (reMatchJoin {s1 = s1} {s2} p1 p2) =
+    g (reMatchJoin {s1 = s1} {s2} p1 p2) =
         Data.List.Any.map g' $ splitInvAppend s1 s2 where
         g' : {x : List A × List A} →
              (s1 ≡ proj₁ x) × (s2 ≡ proj₂ x) →
              REMatch _≈_ re1 (proj₁ x) × REMatch _≈_ re2 (proj₂ x)
-        g' {x} (eq1 , eq2) = eqTyping (cong (REMatch _≈_ re1) eq1) p1 ,
-                             eqTyping (cong (REMatch _≈_ re2) eq2) p2
+        g' (eq1 , eq2) = eqTyping (cong (REMatch _≈_ re1) eq1) p1 ,
+                         eqTyping (cong (REMatch _≈_ re2) eq2) p2
 match {_≈_ = _≈_} dec (reUnion re1 re2) str
         with match dec re1 str | match dec re2 str
 ... | yes p | _ = yes $ reMatchUnionLeft p
@@ -68,5 +67,31 @@ match {_≈_ = _≈_} dec (reUnion re1 re2) str
     f : ¬ REMatch _≈_ (reUnion re1 re2) str
     f (reMatchUnionLeft ¬p1) = ⊥-elim $ p1 ¬p1
     f (reMatchUnionRight ¬p2) = ⊥-elim $ p2 ¬p2
-match dec (reSequence re) str = {!!}
+match {A = A} {_≈_} dec (reSequence re) str =
+    [ yes ∘ f (splits str) (concatInvSplits str) (splitsAllNonEmpty str)
+        , no ∘ flip (anyYesAllNo ∘ g) ]′
+            (anyYesOrAllNo seqdec (splits str)) where
+    seqdec : (l : List (List A)) → Dec (All (REMatch _≈_ re) l)
+    seqdec [] = yes []
+    seqdec (x ∷ xs) with match dec re x | seqdec xs
+    ... | yes p | yes ps = yes $ p ∷ ps
+    ... | no ¬p | _ = no f where
+        f : ¬ All (REMatch _≈_ re) (x ∷ xs)
+        f (p ∷ _) = ¬p p
+    ... | _ | no ¬p = no f where
+        f : ¬ All (REMatch _≈_ re) (x ∷ xs)
+        f (_ ∷ p) = ¬p p
+    f : (l : List (List (List A))) →
+        All (λ l' → concat l' ≡ str) l → All (All (λ l → ¬ ListEmpty l)) l →
+        Any (All (REMatch _≈_ re)) l → REMatch _≈_ (reSequence re) str
+    f [] [] [] ()
+    f (x ∷ xs) (p ∷ ps) (p' ∷ ps') (here pm) =
+        eqTyping (cong (REMatch _≈_ (reSequence re)) p) $ reMatchSequence pm p'
+    f (x ∷ xs) (p ∷ ps) (p' ∷ ps') (there pm) = f xs ps ps' pm
+    g : {str : List A} → REMatch _≈_ (reSequence re) str →
+        Any (All (REMatch _≈_ re)) (splits str)
+    g (reMatchSequence {strList = strList} p1 p2) =
+        Data.List.Any.map
+            (λ eq → eqTyping (cong (All (REMatch _≈_ re)) eq) p1)
+            (splitsInvConcat strList p2)
 
