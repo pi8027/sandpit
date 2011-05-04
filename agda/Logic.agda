@@ -3,31 +3,15 @@
 
 module Logic where
 
-open import Function
-
-data ⊥ : Set where
-
-⊥-elim : ∀ {a} {A : Set a} → ⊥ → A
-⊥-elim ()
+open import Data.Empty
 
 ¬_ : ∀ {a} → Set a → Set a
 ¬ A = A → ⊥
-
-data _∨_ {a} (A B : Set a) : Set a where
-    _∨- : A → A ∨ B
-    -∨_ : B → A ∨ B
 
 record _∧_ {a} (A B : Set a) : Set a where
     field
         l : A
         r : B
-
-orMerge : ∀ {a b} {A B : Set a} {C : Set b} → (A → C) → (B → C) → A ∨ B → C
-orMerge f g (a ∨-) = f a
-orMerge f g (-∨ b) = g b
-
-orMap : ∀ {a} {A B C D : Set a} → (A → C) → (B → D) → A ∨ B → C ∨ D
-orMap f g = orMerge (_∨- ∘ f) (-∨_ ∘ g)
 
 andLeft : ∀ {a} {A B : Set a} → A ∧ B → A
 andLeft = _∧_.l

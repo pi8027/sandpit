@@ -26,6 +26,11 @@ _all++_ : ∀ {a p} {A : Set a} {P : A → Set p} {l1 l2 : List A} →
 [] all++ l = l
 (x ∷ xs) all++ l = x ∷ (xs all++ l)
 
+anyMap⁺ : ∀ {a b p} {A : Set a} {B : Set b} {P : B → Set p}
+          {f : A → B} {xs} → Any (P ∘ f) xs → Any P (Data.List.map f xs)
+anyMap⁺ (here p) = here p
+anyMap⁺ (there p) = there $ anyMap⁺ p
+
 anyYesOrAllNo :
     ∀ {a p} {A : Set a} {P : A → Set p} →
     ((x : A) → Dec (P x)) → (l : List A) → Any P l ⊎ All (λ x → ¬ P x) l
@@ -49,14 +54,26 @@ anyYesAllNo : ∀ {a p} {A : Set a} {P : A → Set p} {l : List A} →
 anyYesAllNo (here p1) (p2 ∷ _) = p2 p1
 anyYesAllNo (there p1) (_ ∷ p2) = anyYesAllNo p1 p2
 
+anyConcat : ∀ {a p} {A : Set a} {P : A → Set p} →
+            (l : List (List A)) → Any (Any P) l → Any P (concat l)
+anyConcat [] ()
+anyConcat (x ∷ xs) (here p) = anyLeft p ++ concat xs
+anyConcat (x ∷ xs) (there p) = anyRight x ++ anyConcat xs p
+
 anyConcatMap :
     ∀ {a b p q} {A : Set a} {B : Set b} {P : A → Set p} {Q : B → Set q} →
     (f : A → List B) → (∀ {x} → P x → Any Q (f x)) → (l : List A) →
     Any P l → Any Q (concatMap f l)
-anyConcatMap f PtoQ [] ()
-anyConcatMap f PtoQ (x ∷ xs) (here p) = anyLeft PtoQ p ++ concatMap f xs
-anyConcatMap f PtoQ (x ∷ xs) (there p) =
-    anyRight f x ++ anyConcatMap f PtoQ xs p
+anyConcatMap f PtoQ xs p = anyConcat (Data.List.map f xs) {!!}
+-- anyConcatMap f PtoQ [] ()
+-- anyConcatMap f PtoQ (x ∷ xs) (here p) = anyLeft PtoQ p ++ concatMap f xs
+-- anyConcatMap f PtoQ (x ∷ xs) (there p) =
+--     anyRight f x ++ anyConcatMap f PtoQ xs p
+
+allConcat : ∀ {a p} {A : Set a} {P : A → Set p} →
+            (l : List (List A)) → All (All P) l → All P (concat l)
+allConcat [] [] = []
+allConcat (x ∷ xs) (p ∷ ps) = p all++ allConcat xs ps
 
 allConcatMap :
     ∀ {a b p q} {A : Set a} {B : Set b} {P : A → Set p} {Q : B → Set q} →

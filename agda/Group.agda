@@ -3,14 +3,16 @@
 
 module Group where
 
-open import Types
 open import Relation.Binary.Core
-open import Relation.Binary.Equal
+open import Relation.Binary.Class
+
+BinOp : ∀ {i} → Set i → Set i
+BinOp A = A → A → A
 
 record Semigroup {i} {A : Set i} (eq : Rel A i) (add : BinOp A) : Set i where
     constructor semigroup
     field
-        base : Equal eq
+        base : IsEquivalence eq
         assoc : {a b c : A} → eq (add a (add b c)) (add (add a b) c)
 
 record CSemigroup {i} {A : Set i} (eq : Rel A i) (add : BinOp A) : Set i where

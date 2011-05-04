@@ -5,9 +5,10 @@ module Data.Nat where
 
 import Level
 open import Logic
-open import Types
 open import Function
+open import Data.Either
 open import Relation.Binary.Core
+open import Relation.Binary.Class
 open import Relation.Binary.Equal
 open import Relation.Binary.Order
 
@@ -40,7 +41,7 @@ desucc 0 {()}
 
 ≡addSucc : {n m : Nat} → (succ n + m) ≡ (n + succ m)
 ≡addSucc {0} = ≡refl
-≡addSucc {succ n} = ≡apply' succ $ ≡addSucc {n}
+≡addSucc {succ n} = ≡apply₁ succ $ ≡addSucc {n}
 
 -- Order Relation
 
@@ -51,33 +52,29 @@ data _≤_ : Rel Nat Level.zero where
 ≤unsucc : ∀ {m n} → succ m ≤ succ n → m ≤ n
 ≤unsucc (≤succ rel) = rel
 
-≤refl : ∀ {i} → i ≤ i
+≤refl : Reflexive _≤_
 ≤refl {0} = ≤0
 ≤refl {succ _} = ≤succ ≤refl
 
-≤trans : ∀ {a b c} → a ≤ b → b ≤ c → a ≤ c
+≤trans : Transitive _≤_
 ≤trans ≤0 p2 = ≤0
 ≤trans (≤succ p1) (≤succ p2) = ≤succ $ ≤trans p1 p2
 
-≤total : ∀ {a b} → (a ≤ b) ∨ (b ≤ a)
-≤total {a = 0} = ≤0 ∨-
-≤total {b = 0} = -∨ ≤0
-≤total {succ a} {succ b} = orMap ≤succ ≤succ ≤total
+≤antisym : Antisymmetric _≡_ _≤_
+≤antisym ≤0 ≤0 = ≡refl
+≤antisym (≤succ p1) (≤succ p2) = ≡apply₁ succ $ ≤antisym p1 p2
 
-≤decide : (a b : Nat) → Decide (a ≤ b)
-≤decide 0 _ = ≤0 ∨-
-≤decide (succ a) 0 = -∨ \()
-≤decide (succ a) (succ b) = orMap ≤succ (\ a≰b → a≰b ∘ ≤unsucc) (≤decide a b)
+≤total : Total _≤_
+≤total {a = 0} = left ≤0
+≤total {b = 0} = right ≤0
+≤total {succ a} {succ b} = eitherMap ≤succ ≤succ ≤total
 
-≤Order : Order _≤_
-≤Order = order ≤refl ≤trans
-
-≤TotalOrder : TotalOrder _≤_
-≤TotalOrder = torder ≤Order ≤total
-
-≤DecidableOrder : DecidableOrder _≤_
-≤DecidableOrder = dorder ≤TotalOrder ≤decide
-
+≤decide : Decidable _≤_
+≤decide 0 _ = left ≤0
+≤decide (succ a) 0 = right \()
+≤decide (succ a) (succ b) =
+    eitherMap ≤succ (\ a≰b → a≰b ∘ ≤unsucc) (≤decide a b)
 ≤reflSucc : ∀ {i} → i ≤ succ i
 ≤reflSucc {0} = ≤0
 ≤reflSucc {succ _} = ≤succ ≤reflSucc
+

@@ -3,34 +3,42 @@
 
 module Relation.Binary.Order where
 
+open import Level
 open import Logic
-open import Types
 open import Function
+open import Data.Empty
 open import Relation.Binary.Core
+open import Relation.Binary.Class
 
-record Order {i} {A : Set i} (op : Rel A i) : Set i where
-    constructor order
+record IsPreorder {a ℓ₁ ℓ₂} {A : Set a} (_≈_ : Rel A ℓ₁) (_≤_ : Rel A ℓ₂) :
+                  Set (a ⊔ ℓ₁ ⊔ ℓ₂) where
+    constructor isPreorder
+    
     field
-        refl  : ∀ {i} → op i i
-        trans : ∀ {a b c} → op a b → op b c → op a c
+        equiv : IsEquivalence _≈_
+        refl  : _≈_ ⇒ _≤_
+        trans : Transitive _≤_
 
-record TotalOrder {i} {A : Set i} (op : Rel A i) : Set i where
-    constructor torder
+record IsPartialOrder {a ℓ₁ ℓ₂} {A : Set a} (_≈_ : Rel A ℓ₁) (_≤_ : Rel A ℓ₂) :
+                      Set (a ⊔ ℓ₁ ⊔ ℓ₂) where
+    constructor isPartialOrder
+    
     field
-        base  : Order op
-        total : ∀ {a b} → op a b ∨ op b a
+        preorder : IsPreorder _≈_ _≤_
+        antisym  : Antisymmetric _≈_ _≤_
 
-record DecidableOrder {i} {A : Set i} (op : Rel A i) : Set i where
-    constructor dorder
+record IsTotalOrder {a ℓ₁ ℓ₂} {A : Set a} (_≈_ : Rel A ℓ₁) (_≤_ : Rel A ℓ₂) :
+                  Set (a ⊔ ℓ₁ ⊔ ℓ₂) where
+    constructor isTotalOrder
     field
-        base   : TotalOrder op
-        decide : (a b : A) → Decide (op a b)
+        partialorder : IsPartialOrder _≈_ _≤_
+        total        : Total _≤_
 
-trichotomy : ∀ {i} {A : Set i} {op : Rel A i} {a b : A} →
-             TotalOrder op → ¬ (op b a) → op a b
-trichotomy (torder _ total) b≰a = orMerge id (⊥-elim ∘ b≰a) total
-
-trichotomy' : ∀ {i} {A : Set i} {op : Rel A i} {a b : A} →
-              DecidableOrder op → ¬ op b a → op a b
-trichotomy' (dorder base _) b≰a = trichotomy base b≰a
+record IsDecTotalOrder {a ℓ₁ ℓ₂} {A : Set a} (_≈_ : Rel A ℓ₁) (_≤_ : Rel A ℓ₂) :
+                     Set (a ⊔ ℓ₁ ⊔ ℓ₂) where
+    constructor isDecTotalOrder
+    field
+        totalorder : IsTotalOrder _≈_ _≤_
+        ≈decide    : Decidable _≈_
+        ≤decide    : Decidable _≤_
 

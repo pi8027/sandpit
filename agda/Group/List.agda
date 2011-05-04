@@ -11,14 +11,14 @@ open import Group
 ++assoc : ∀ {i} {A : Set i} {a b c : List A} →
           (a ++ (b ++ c)) ≡ ((a ++ b) ++ c)
 ++assoc {a = []} = ≡refl
-++assoc {a = x ∷ xs} = ≡apply'' _∷_ ≡refl $ ++assoc {a = xs}
+++assoc {a = x ∷ xs} = ≡apply₁ (_∷_ x) (++assoc {a = xs})
 
 ++idleft : ∀ {i} {A : Set i} {a : List A} → ([] ++ a) ≡ a
 ++idleft = ≡refl
 
 ++idright : ∀ {i} {A : Set i} {a : List A} → (a ++ []) ≡ a
 ++idright {a = []} = ≡refl
-++idright {a = x ∷ xs} = ≡apply'' _∷_ ≡refl ++idright
+++idright {a = x ∷ xs} = ≡apply₁ (_∷_ x) ++idright
 
 ++Semigroup : ∀ {i} {A : Set i} → Semigroup {A = List A} _≡_ _++_
 ++Semigroup = semigroup ≡Equal (\{a} → ++assoc {a = a})

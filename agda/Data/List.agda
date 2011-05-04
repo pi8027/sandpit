@@ -5,9 +5,10 @@ module Data.List where
 
 open import Function
 open import Logic
-open import Types
 open import Data.Nat
+open import Data.Either
 open import Relation.Binary.Core
+open import Relation.Binary.Class
 open import Relation.Binary.Equal
 open import Relation.Binary.Order
 
@@ -40,11 +41,10 @@ _++_ = flip $ foldr _∷_
 concat : ∀ {i} {A : Set i} → List (List A) → List A
 concat = foldr _++_ []
 
-data Ordered {i} {A : Set i} {op : Rel A i}
-             (ord : DecidableOrder op) : A → List A → Set i where
-    orderedNull : {b : A} → Ordered ord b []
+data Ordered {i} {A : Set i} (leq : Rel A i) : A → List A → Set i where
+    orderedNull : {b : A} → Ordered leq b []
     orderedCons : {b : A} {l : List A} →
-                  (h : A) → op b h → Ordered ord h l → Ordered ord b (h ∷ l)
+                  (h : A) → leq b h → Ordered leq h l → Ordered leq b (h ∷ l)
 
 -- Equality Relation
 
@@ -63,59 +63,68 @@ data LeqList {i} {A : Set i} (op : Rel A i) : Rel (List A) i where
     consOrder : ∀ {x y xs ys} → op x y → (¬ op y x) ∨ LeqList op xs ys →
                 LeqList op (x ∷ xs) (y ∷ ys)
 
-ListOrder : ∀ {i} {A : Set i} →
-            (op : Rel A i) → Order op → Order (LeqList op)
-ListOrder op (order refl trans) = order listRefl listTrans where
+listRefl : ∀ {i} {A : Set i} {op : Rel A i} ->
+           Reflexive op -> Reflexive (LeqList op)
+listRefl refl {[]} = nullIsMinimal
+listRefl refl {x ∷ xs} = consOrder refl $ right $ listRefl refl
 
-    listRefl : ∀ {a} → LeqList op a a
-    listRefl {[]} = nullIsMinimal
-    listRefl {x ∷ xs} = consOrder refl (-∨ listRefl)
+-- listTrans : ∀ {i} {A : Set i} {op : Rel A i} -> Transitive op
+-- listTrans {a = []} _ _ = nullIsMinimal
+-- listTrans _ _ = ?
 
-    listTrans : ∀ {a b c} → LeqList op a b → LeqList op b c → LeqList op a c
-    listTrans {a = []} _ _ = nullIsMinimal
-    listTrans {a = _ ∷ _} {b = []} () p2
-    listTrans {b = _ ∷ _} {c = []} p1 ()
-    listTrans (consOrder p1 (p2 ∨-)) (consOrder p3 _) =
-        consOrder (trans p1 p3) ((p2 ∘ trans p3) ∨-)
-    listTrans (consOrder p1 _) (consOrder p2 (p3 ∨-)) =
-        consOrder (trans p1 p2) ((p3 ∘ flip trans p1) ∨-)
-    listTrans (consOrder p1 (-∨ p2)) (consOrder p3 (-∨ p4)) =
-        consOrder (trans p1 p3) (-∨ listTrans p2 p4)
+-- ListOrder : ∀ {i} {A : Set i} →
+--             (op : Rel A i) → Order op → Order (LeqList op)
+-- ListOrder op (order refl trans) = order listRefl listTrans where
 
-ListTotalOrder : ∀ {i} {A : Set i} → (op : Rel A i) →
-                 DecidableOrder op → TotalOrder (LeqList op)
-ListTotalOrder {A = A} op (dorder (torder (order refl trans) total) decide) =
-    torder (ListOrder op (order refl trans)) listTotal where
+--     listRefl : ∀ {a} → LeqList op a a
+--     listRefl {[]} = nullIsMinimal
+--     listRefl {x ∷ xs} = consOrder refl (-∨ listRefl)
 
-    listTotal : ∀ {a b} → LeqList op a b ∨ LeqList op b a
-    listTotal {a = []} = nullIsMinimal ∨-
-    listTotal {b = []} = -∨ nullIsMinimal
-    listTotal {x ∷ xs} {y ∷ ys} with decide x y | decide y x
-    ... | x≤y ∨- | y≤x ∨- =
-        orMap (consOrder x≤y ∘ -∨_) (consOrder y≤x ∘ -∨_) listTotal
-    ... | x≤y ∨- | -∨ y≰x = consOrder x≤y (y≰x ∨-) ∨-
-    ... | -∨ x≰y | y≤x ∨- = -∨ consOrder y≤x (x≰y ∨-)
-    ... | -∨ x≰y | -∨ y≰x = ⊥-elim $ orMerge x≰y y≰x total
+--     listTrans : ∀ {a b c} → LeqList op a b → LeqList op b c → LeqList op a c
+--     listTrans {a = []} _ _ = nullIsMinimal
+--     listTrans {a = _ ∷ _} {b = []} () p2
+--     listTrans {b = _ ∷ _} {c = []} p1 ()
+--     listTrans (consOrder p1 (p2 ∨-)) (consOrder p3 _) =
+--         consOrder (trans p1 p3) ((p2 ∘ trans p3) ∨-)
+--     listTrans (consOrder p1 _) (consOrder p2 (p3 ∨-)) =
+--         consOrder (trans p1 p2) ((p3 ∘ flip trans p1) ∨-)
+--     listTrans (consOrder p1 (-∨ p2)) (consOrder p3 (-∨ p4)) =
+--         consOrder (trans p1 p3) (-∨ listTrans p2 p4)
 
-ListDecidableOrder : ∀ {i} {A : Set i} → (op : Rel A i) →
-                     DecidableOrder op → DecidableOrder (LeqList op)
-ListDecidableOrder {A = A} op
-        (dorder (torder (order refl trans) total) decide) =
-    dorder
-        (ListTotalOrder op (dorder (torder (order refl trans) total) decide))
-        listDecide where
+-- ListTotalOrder : ∀ {i} {A : Set i} → (op : Rel A i) →
+--                  DecidableOrder op → TotalOrder (LeqList op)
+-- ListTotalOrder {A = A} op (dorder (torder (order refl trans) total) decide) =
+--     torder (ListOrder op (order refl trans)) listTotal where
 
-    listDecide : (a b : List A) → Decide (LeqList op a b)
-    listDecide [] _ = nullIsMinimal ∨-
-    listDecide (x ∷ xs) [] = -∨ \()
-    listDecide (x ∷ xs) (y ∷ ys)
-        with decide x y | decide y x | listDecide xs ys
-    ... | x≤y ∨- | y≤x ∨- | xs≤ys ∨- = consOrder x≤y (-∨ xs≤ys) ∨-
-    ... | x≤y ∨- | y≤x ∨- | -∨ xs≰ys = -∨ p where
-        p : ¬ LeqList op (x ∷ xs) (y ∷ ys)
-        p (consOrder _ p) = orMerge (flip id y≤x) xs≰ys p
-    ... | x≤y ∨- | -∨ y≰x | _ = consOrder x≤y (y≰x ∨-) ∨-
-    ... | -∨ x≰y | _ | _ = -∨ p where
-        p : ¬ LeqList op (x ∷ xs) (y ∷ ys)
-        p (consOrder x≤y _) = x≰y x≤y
+--     listTotal : ∀ {a b} → LeqList op a b ∨ LeqList op b a
+--     listTotal {a = []} = nullIsMinimal ∨-
+--     listTotal {b = []} = -∨ nullIsMinimal
+--     listTotal {x ∷ xs} {y ∷ ys} with decide x y | decide y x
+--     ... | x≤y ∨- | y≤x ∨- =
+--         orMap (consOrder x≤y ∘ -∨_) (consOrder y≤x ∘ -∨_) listTotal
+--     ... | x≤y ∨- | -∨ y≰x = consOrder x≤y (y≰x ∨-) ∨-
+--     ... | -∨ x≰y | y≤x ∨- = -∨ consOrder y≤x (x≰y ∨-)
+--     ... | -∨ x≰y | -∨ y≰x = ⊥-elim $ orMerge x≰y y≰x total
+
+-- ListDecidableOrder : ∀ {i} {A : Set i} → (op : Rel A i) →
+--                      DecidableOrder op → DecidableOrder (LeqList op)
+-- ListDecidableOrder {A = A} op
+--         (dorder (torder (order refl trans) total) decide) =
+--     dorder
+--         (ListTotalOrder op (dorder (torder (order refl trans) total) decide))
+--         listDecide where
+
+--     listDecide : (a b : List A) → Decide (LeqList op a b)
+--     listDecide [] _ = nullIsMinimal ∨-
+--     listDecide (x ∷ xs) [] = -∨ \()
+--     listDecide (x ∷ xs) (y ∷ ys)
+--         with decide x y | decide y x | listDecide xs ys
+--     ... | x≤y ∨- | y≤x ∨- | xs≤ys ∨- = consOrder x≤y (-∨ xs≤ys) ∨-
+--     ... | x≤y ∨- | y≤x ∨- | -∨ xs≰ys = -∨ p where
+--         p : ¬ LeqList op (x ∷ xs) (y ∷ ys)
+--         p (consOrder _ p) = orMerge (flip id y≤x) xs≰ys p
+--     ... | x≤y ∨- | -∨ y≰x | _ = consOrder x≤y (y≰x ∨-) ∨-
+--     ... | -∨ x≰y | _ | _ = -∨ p where
+--         p : ¬ LeqList op (x ∷ xs) (y ∷ ys)
+--         p (consOrder x≤y _) = x≰y x≤y
 

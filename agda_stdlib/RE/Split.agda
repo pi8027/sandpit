@@ -16,11 +16,6 @@ open import Relation.Nullary
 open import RE.Core
 open import RE.List
 
-anyMap⁺ : ∀ {a b p} {A : Set a} {B : Set b} {P : B → Set p}
-          {f : A → B} {xs} → Any (P ∘ f) xs → Any P (Data.List.map f xs)
-anyMap⁺ (here p) = here p
-anyMap⁺ (there p) = there $ anyMap⁺ p
-
 split : ∀ {a} {A : Set a} → List A → List (List A × List A)
 split [] = [ ([] , []) ]
 split (x ∷ xs) =

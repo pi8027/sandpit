@@ -4,7 +4,6 @@
 module Relation.Binary.Permutation where
 
 open import Function
-open import Types
 open import Data.List
 open import Relation.Binary.Core
 open import Relation.Binary.Equal
