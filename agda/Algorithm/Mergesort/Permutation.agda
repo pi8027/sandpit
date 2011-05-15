@@ -16,29 +16,24 @@ open import Relation.Binary.Permutation
 open import Algorithm.Mergesort.Impl
 
 merge-permutation :
-    ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} {len : Nat} →
+    ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} →
     (order : IsDecTotalOrder _≈_ _≲_) → (xs ys : List A) →
-    {eq : len ≡ (length xs + length ys)} →
-    Permutation (xs ++ ys) (merge order xs ys {eq})
+    Permutation (xs ++ ys) (merge order xs ys)
 merge-permutation ord [] ys = eqPerm ≡refl
-merge-permutation {len = succ len} ord (x ∷ xs) [] =
-    permSkip $ merge-permutation ord xs []
-merge-permutation {A = A} {len = succ len} ord (x ∷ xs) (y ∷ ys)
-    with IsDecTotalOrder.≤decide ord x y
-... | left _ = permSkip $ merge-permutation {len = len} ord xs (y ∷ ys)
-... | right _ = permTrans (move {xs = x ∷ xs}) $ permSkip $
-    merge-permutation {len = len} ord (x ∷ xs) ys where
+merge-permutation ord (x ∷ xs) [] = eqPerm ++idright
+merge-permutation {A = A} ord (x ∷ xs) (y ∷ ys) =
+    deccaseP (Permutation ((x ∷ xs) ++ (y ∷ ys))) x y
+            (IsDecTotalOrder.≤decide ord)
+        (λ _ → x ∷ merge ord xs (y ∷ ys))
+        (λ _ → y ∷ merge ord (x ∷ xs) ys)
+        (λ _ → permSkip (merge-permutation ord xs (y ∷ ys)))
+        (λ _ → permTrans (move {xs = x ∷ xs}) $
+            permSkip $ merge-permutation ord (x ∷ xs) ys)
+    where
     move : {y : A} {xs ys : List A} →
            Permutation (xs ++ (y ∷ ys)) (y ∷ xs ++ ys)
     move {xs = []} = eqPerm ≡refl
     move {xs = x ∷ xs} = permTrans (permSkip (move {xs = xs})) permSwap
-merge-permutation {len = 0} _ (_ ∷ _) _ {()}
-
-merge-permutation' :
-    ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} →
-    (order : IsDecTotalOrder _≈_ _≲_) → (xs ys : List A) →
-    Permutation (xs ++ ys) (merge' order xs ys)
-merge-permutation' ord xs ys = merge-permutation ord xs ys
 
 mergePair-permutation :
     ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} →

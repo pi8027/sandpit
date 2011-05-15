@@ -23,5 +23,10 @@ data _≡_ {i} {A : Set i} : Rel A i where
             (f : A → B → C) → a ≡ a' → b ≡ b' → f a b ≡ f a' b'
 ≡apply₂ f ≡refl ≡refl = ≡refl
 
+≡typing : ∀ {t} {T1 T2 : Set t} → T1 ≡ T2 → T1 → T2
+≡typing ≡refl a = a
+
 ≡Equal : ∀ {a} {A : Set a} → IsEquivalence (_≡_ {a} {A})
 ≡Equal = isEquivalence ≡refl ≡sym ≡trans
+
+

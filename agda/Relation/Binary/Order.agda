@@ -7,6 +7,7 @@ open import Level
 open import Logic
 open import Function
 open import Data.Empty
+open import Data.Either
 open import Relation.Binary.Core
 open import Relation.Binary.Class
 
@@ -33,6 +34,8 @@ record IsTotalOrder {a ℓ₁ ℓ₂} {A : Set a} (_≈_ : Rel A ℓ₁) (_≤_ 
     field
         partialorder : IsPartialOrder _≈_ _≤_
         total        : Total _≤_
+    total' : {x y : A} → ¬ (x ≤ y) → y ≤ x
+    total' {x} {y} ¬x≤y = either (⊥-elim ∘ ¬x≤y) id (total {x} {y})
 
 record IsDecTotalOrder {a ℓ₁ ℓ₂} {A : Set a} (_≈_ : Rel A ℓ₁) (_≤_ : Rel A ℓ₂) :
                      Set (a ⊔ ℓ₁ ⊔ ℓ₂) where
@@ -41,4 +44,8 @@ record IsDecTotalOrder {a ℓ₁ ℓ₂} {A : Set a} (_≈_ : Rel A ℓ₁) (_�
         totalorder : IsTotalOrder _≈_ _≤_
         ≈decide    : Decidable _≈_
         ≤decide    : Decidable _≤_
+    total : Total _≤_
+    total = IsTotalOrder.total totalorder
+    total' : {x y : A} → ¬ (x ≤ y) → y ≤ x
+    total' = IsTotalOrder.total' totalorder
 

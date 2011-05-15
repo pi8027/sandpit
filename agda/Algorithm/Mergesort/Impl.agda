@@ -9,31 +9,39 @@ open import Data.Either
 open import Data.Nat
 open import Data.List
 open import Relation.Binary.Core
+open import Relation.Binary.Class
 open import Relation.Binary.Equal
 open import Relation.Binary.Order
 
-merge : ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} {len : Nat} →
-        IsDecTotalOrder _≈_ _≲_ → (xs ys : List A) →
-        {eq : len ≡ (length xs + length ys)} → List A
-merge ord [] ys = ys
-merge {len = succ len} ord (x ∷ xs) [] {eq} =
-    x ∷ merge {len = len} ord xs [] {≡desucc eq}
-merge {len = succ len} ord (x ∷ xs) (y ∷ ys) {eq}
-    with IsDecTotalOrder.≤decide ord x y
-... | left _ = x ∷ merge {len = len} ord xs (y ∷ ys) {≡desucc eq}
-... | right _ = y ∷ merge {len = len} ord (x ∷ xs) ys
-    {≡trans (≡desucc eq) (≡sym (≡addSucc {length xs}))}
-merge {len = 0} _ (_ ∷ _) _ {()}
+deccase : ∀ {i j} {A : Set i} {B : Set j} {_∼_ : Rel A i} →
+          (x y : A) → Decidable _∼_ → (x ∼ y → B) → (¬ (x ∼ y) → B) → B
+deccase x y dec f g with dec x y
+... | left x∼y = f x∼y
+... | right ¬x∼y = g ¬x∼y
 
-merge' : ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} →
-         IsDecTotalOrder _≈_ _≲_ → List A → List A → List A
-merge' ord xs ys = merge {len = length xs + length ys} ord xs ys {≡refl}
+deccaseP :
+    ∀ {i j p} {A : Set i} {B : Set j} {_∼_ : Rel A i} →
+    (P : B → Set p) → (x y : A) → (dec : Decidable _∼_) →
+    (f : x ∼ y → B) → (g : ¬ (x ∼ y) → B) →
+    ((r : x ∼ y) → P (f r)) → ((r : ¬ (x ∼ y)) → P (g r)) →
+    P (deccase x y dec f g)
+deccaseP P x y dec f g fp gp with dec x y
+... | left x∼y = fp x∼y
+... | right ¬x∼y = gp ¬x∼y
+
+merge : ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} →
+        IsDecTotalOrder _≈_ _≲_ → List A → List A → List A
+merge ord [] ys = ys
+merge ord xs [] = xs
+merge ord (x ∷ xs) (y ∷ ys) = deccase x y (IsDecTotalOrder.≤decide ord)
+    (λ _ → x ∷ merge ord xs (y ∷ ys))
+    (λ _ → y ∷ merge ord (x ∷ xs) ys)
 
 mergePair : ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} →
             IsDecTotalOrder _≈_ _≲_ → List (List A) → List (List A)
 mergePair _ [] = []
 mergePair _ (x ∷ []) = x ∷ []
-mergePair ord (x ∷ x' ∷ xs) = merge' ord x x' ∷ mergePair ord xs
+mergePair ord (x ∷ x' ∷ xs) = merge ord x x' ∷ mergePair ord xs
 
 ≤mergePair :
     ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} {order : IsDecTotalOrder _≈_ _≲_} →

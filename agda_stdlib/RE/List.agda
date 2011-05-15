@@ -64,11 +64,11 @@ anyConcatMap :
     ∀ {a b p q} {A : Set a} {B : Set b} {P : A → Set p} {Q : B → Set q} →
     (f : A → List B) → (∀ {x} → P x → Any Q (f x)) → (l : List A) →
     Any P l → Any Q (concatMap f l)
-anyConcatMap f PtoQ xs p = anyConcat (Data.List.map f xs) {!!}
--- anyConcatMap f PtoQ [] ()
--- anyConcatMap f PtoQ (x ∷ xs) (here p) = anyLeft PtoQ p ++ concatMap f xs
--- anyConcatMap f PtoQ (x ∷ xs) (there p) =
---     anyRight f x ++ anyConcatMap f PtoQ xs p
+-- anyConcatMap f PtoQ xs p = anyConcat (Data.List.map f xs) {!!}
+anyConcatMap f PtoQ [] ()
+anyConcatMap f PtoQ (x ∷ xs) (here p) = anyLeft PtoQ p ++ concatMap f xs
+anyConcatMap f PtoQ (x ∷ xs) (there p) =
+    anyRight f x ++ anyConcatMap f PtoQ xs p
 
 allConcat : ∀ {a p} {A : Set a} {P : A → Set p} →
             (l : List (List A)) → All (All P) l → All P (concat l)
