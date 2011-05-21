@@ -48,26 +48,19 @@ mergePair-permutation ord (x ∷ x' ∷ xs) =
 mergeAll-permutation :
     ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} {n : Nat} →
     (order : IsDecTotalOrder _≈_ _≲_) → (l : List (List A)) →
-    {rel : length l ≤ n} → Permutation (concat l) (mergeAll order l {rel})
+    {rel : length l ≤ n} → Permutation (concat l) (mergeAll order l rel)
 mergeAll-permutation _ [] = permNull
 mergeAll-permutation _ (x ∷ []) = eqPerm ++idright
-mergeAll-permutation {n = succ n} ord (x ∷ x' ∷ xs) {≤succ rel} =
+mergeAll-permutation ord (x ∷ x' ∷ xs) {≤succ rel} =
     permTrans (mergePair-permutation ord (x ∷ x' ∷ xs))
-        (mergeAll-permutation {n = n} ord (mergePair ord (x ∷ x' ∷ xs)))
-mergeAll-permutation {n = 0} _ (_ ∷ _) {()}
-
-mergeAll-permutation' :
-    ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} →
-    (order : IsDecTotalOrder _≈_ _≲_) → (l : List (List A)) →
-    Permutation (concat l) (mergeAll' order l)
-mergeAll-permutation' ord l = mergeAll-permutation {n = length l} ord l
+        (mergeAll-permutation ord (mergePair ord (x ∷ x' ∷ xs)))
 
 mergesort-permutation :
     ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} →
     (order : IsDecTotalOrder _≈_ _≲_) → (l : List A) →
     Permutation l (mergesort order l)
 mergesort-permutation ord l =
-    permTrans (eqPerm p) (mergeAll-permutation' ord (map (flip _∷_ []) l))
+    permTrans (eqPerm p) (mergeAll-permutation ord (map (flip _∷_ []) l))
     where
     p : ∀ {l} → l ≡ concat (map (flip _∷_ []) l)
     p {[]} = ≡refl

@@ -25,6 +25,10 @@ flip : ∀ {i j k} {A : Set i} {B : Set j} {C : A → B → Set k} →
        ((a : A) → (b : B) → C a b) → (b : B) → (a : A) → C a b
 flip f b a = f a b
 
+flip′ : ∀ {i j k} {A : Set i} {B : Set j} {C : Set k} ->
+        (A → B → C) → B → A → C
+flip′ = flip
+
 const : ∀ {a b} {A : Set a} {B : Set b} → A → B → A
 const a _ = a
 

@@ -50,20 +50,18 @@ mergePair ord (x ∷ x' ∷ xs) = merge ord x x' ∷ mergePair ord xs
 ≤mergePair (_ ∷ []) = ≤succ ≤0
 ≤mergePair (_ ∷ _ ∷ l) = ≤succ $ ≤trans (≤mergePair l) ≤reflSucc
 
-mergeAll :
-    ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} {n : Nat} →
-    IsDecTotalOrder _≈_ _≲_ → (l : List (List A)) → {rel : length l ≤ n} →
-    List A
-mergeAll _ [] = []
-mergeAll _ (x ∷ []) = x
-mergeAll {n = succ n} ord (x ∷ x' ∷ xs) {≤succ rel} =
-    mergeAll {n = n} ord (mergePair ord (x ∷ x' ∷ xs))
-    {≤trans (≤succ (≤mergePair xs)) rel}
-mergeAll {n = 0} _ (_ ∷ _) {()}
+mergeAll : ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} {n : Nat} →
+           IsDecTotalOrder _≈_ _≲_ →
+           (l : List (List A)) → length l ≤ n → List A
+mergeAll _ [] _ = []
+mergeAll _ (x ∷ []) _ = x
+mergeAll ord (x ∷ x' ∷ xs) (≤succ rel) =
+    mergeAll ord (mergePair ord (x ∷ x' ∷ xs))
+        (≤trans (≤succ (≤mergePair xs)) rel)
 
 mergeAll' : ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} →
             IsDecTotalOrder _≈_ _≲_ → List (List A) → List A
-mergeAll' ord xs = mergeAll {n = length xs} ord xs {≤refl}
+mergeAll' ord xs = mergeAll ord xs ≤refl
 
 mergesort : ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} →
             IsDecTotalOrder _≈_ _≲_ → List A → List A

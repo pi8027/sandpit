@@ -45,29 +45,21 @@ mergeAll-ordered :
     ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} {b : A} {n : Nat} →
     (order : IsDecTotalOrder _≈_ _≲_) → (l : List (List A)) →
     {rel : length l ≤ n} → All (Ordered _≲_ b) l →
-    Ordered _≲_ b (mergeAll order l {rel})
-mergeAll-ordered _ [] [*] = orderedNull
+    Ordered _≲_ b (mergeAll order l rel)
+mergeAll-ordered _ [] [] = orderedNull
 mergeAll-ordered ord (x ∷ []) (p ∷ _) = p
-mergeAll-ordered {n = succ n} ord (x ∷ x' ∷ xs) {≤succ rel} ordseq =
-    mergeAll-ordered {n = n} ord (mergePair ord (x ∷ x' ∷ xs))
+mergeAll-ordered ord (x ∷ x' ∷ xs) {≤succ _} ordseq =
+    mergeAll-ordered ord (mergePair ord (x ∷ x' ∷ xs))
         (mergePair-ordered ord (x ∷ x' ∷ xs) ordseq)
-mergeAll-ordered {n = 0} _ (_ ∷ _) {()} _
-
-mergeAll-ordered' :
-    ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} {b : A} →
-    (order : IsDecTotalOrder _≈_ _≲_) → (l : List (List A)) →
-    All (Ordered _≲_ b) l → Ordered _≲_ b (mergeAll' order l)
-mergeAll-ordered' ord l ordseq =
-    mergeAll-ordered {n = length l} ord l {≤refl} ordseq
 
 mergesort-ordered :
     ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} {b : A} →
     (order : IsDecTotalOrder _≈_ _≲_) → (l : List A) →
     All (_≲_ b) l → Ordered _≲_ b (mergesort order l)
 mergesort-ordered {A = A} {_≈_} {_≲_} {b} ord l ps =
-    mergeAll-ordered' ord (map (λ a → a ∷ []) l) (p l ps) where
+    mergeAll-ordered ord (map (flip′ _∷_ []) l) (p l ps) where
     p : (l : List A) → All (_≲_ b) l →
-        All (Ordered _≲_ b) (map (λ a → a ∷ []) l)
+        All (Ordered _≲_ b) (map (flip′ _∷_ []) l)
     p [] [] = []
     p (x ∷ xs) (p1 ∷ p2) = orderedCons x p1 orderedNull ∷ p xs p2
 
