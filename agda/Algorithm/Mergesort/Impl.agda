@@ -10,7 +10,6 @@ open import Data.Nat
 open import Data.List
 open import Relation.Binary.Core
 open import Relation.Binary.Class
-open import Relation.Binary.Equal
 open import Relation.Binary.Order
 
 deccase : ∀ {i j} {A : Set i} {B : Set j} {_∼_ : Rel A i} →
@@ -59,11 +58,7 @@ mergeAll ord (x ∷ x' ∷ xs) (≤succ rel) =
     mergeAll ord (mergePair ord (x ∷ x' ∷ xs))
         (≤trans (≤succ (≤mergePair xs)) rel)
 
-mergeAll' : ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} →
-            IsDecTotalOrder _≈_ _≲_ → List (List A) → List A
-mergeAll' ord xs = mergeAll ord xs ≤refl
-
 mergesort : ∀ {i} {A : Set i} {_≈_ _≲_ : Rel A i} →
             IsDecTotalOrder _≈_ _≲_ → List A → List A
-mergesort ord xs = mergeAll' ord $ map (flip _∷_ []) xs
+mergesort ord xs = mergeAll ord (map (flip _∷_ []) xs) ≤refl
 
