@@ -4,15 +4,11 @@
 module Algorithm.Mergesort.Ordered where
 
 open import Function
-open import Data.Either
-open import Data.Empty
 open import Data.Nat
 open import Data.List
 open import Data.TList
 open import Relation.Binary.Core
-open import Relation.Binary.Equal
 open import Relation.Binary.Order
-open import Relation.Binary.Class
 open import Algorithm.Mergesort.Impl
 
 merge-ordered :
@@ -57,9 +53,6 @@ mergesort-ordered :
     (order : IsDecTotalOrder _≈_ _≲_) → (l : List A) →
     All (_≲_ b) l → Ordered _≲_ b (mergesort order l)
 mergesort-ordered {A = A} {_≈_} {_≲_} {b} ord l ps =
-    mergeAll-ordered ord (map (flip′ _∷_ []) l) (p l ps) where
-    p : (l : List A) → All (_≲_ b) l →
-        All (Ordered _≲_ b) (map (flip′ _∷_ []) l)
-    p [] [] = []
-    p (x ∷ xs) (p1 ∷ p2) = orderedCons x p1 orderedNull ∷ p xs p2
+    mergeAll-ordered ord (map (flip′ _∷_ []) l)
+        (mapAll l (λ {x} p → orderedCons x p orderedNull) ps)
 

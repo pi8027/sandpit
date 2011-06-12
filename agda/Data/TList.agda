@@ -14,9 +14,6 @@ data TList {i} : List (Set i) → Set (succ i) where
     [] : TList []
     _∷_ : {t : Set i} {ts : List (Set i)} → t → TList ts → TList (t ∷ ts)
 
-All : ∀ {i j} {A : Set i} → (A → Set j) → List A → Set (succ j)
-All f l = TList (map f l)
-
 *foldr : ∀ {i j k} {l : List (Set i)} {B : Set k} {tf : Set i → B → B} {b : B} →
          (g : B → Set j) → ({A : Set i} → {b : B} → A → g b → g (tf A b)) →
          g b → TList l → g (foldr tf b l)
@@ -43,4 +40,15 @@ _*++_ = flip $ *foldr TList _∷_
           TList (map TList l) → TList (concat l)
 *concat {l = []} [] = []
 *concat {l = t ∷ ts} (x ∷ xs) = x *++ *concat {l = ts} xs
+
+-- All
+
+All : ∀ {i j} {A : Set i} → (A → Set j) → List A → Set (succ j)
+All f l = TList (map f l)
+
+mapAll : ∀ {a b ℓ₁ ℓ₂} {A : Set a} {B : Set b}
+         {P : A → Set ℓ₁} {Q : B → Set ℓ₂} {f : A → B} →
+         (l : List A) → (∀ {a} → P a → Q (f a)) → All P l → All Q (map f l)
+mapAll [] p [] = []
+mapAll (x ∷ xs) pf (p ∷ ps) = pf p ∷ mapAll xs pf ps
 

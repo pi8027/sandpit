@@ -3,9 +3,7 @@
 
 module Algorithm.Mergesort.Permutation where
 
-open import Logic
 open import Function
-open import Data.Either
 open import Data.Nat
 open import Data.List
 open import Group.List
@@ -64,5 +62,5 @@ mergesort-permutation ord l =
     where
     p : ∀ {l} → l ≡ concat (map (flip _∷_ []) l)
     p {[]} = ≡refl
-    p {x ∷ xs} = ≡apply₁ (_∷_ x) $ p {xs}
+    p {x ∷ xs} = ≡apply₁ (_∷_ x) p
 
