@@ -121,7 +121,7 @@
                 [ 3 1 roll { exch } forall {} forall ] exch stack_conv_gen
             }
             {
-                false
+                dup head 2 index length 1 add 1 /roll cvx 6 4 roll tail stack_conv_gen
             } ifelse
         } ifelse
     } ifelse
