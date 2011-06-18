@@ -86,7 +86,7 @@
 
 /stack_conv_gen { % from to <stack_conv_gen> op1 op2 ...
     dup length 0 eq { % from to
-        pop { pop /pop cvx } forall true
+        pop { pop /pop cvx } forall
     }
     { % from to
         1 index headsafe {
@@ -128,15 +128,10 @@
 } bind def
 
 /stack_conv { % from to <stack_conv> array
-    [ 3 1 roll stack_conv_gen {
-        ] cvx bind true
-    }
-    {
-        ] pop false
-    } ifelse
+    [ 3 1 roll stack_conv_gen ] cvx
 } bind def
 
 /sconv {
-    stack_conv { exec } if
+    stack_conv exec
 } bind def
 
