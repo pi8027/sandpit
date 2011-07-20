@@ -9,6 +9,7 @@ import qualified Data.ByteString.Char8 as BS
 import Control.Applicative
 import Control.Monad.State
 import Control.Arrow
+import System.IO
 
 -- Definition
 
@@ -56,7 +57,7 @@ intToStr n s = if n < 26 then s' else intToStr ((n `div` 26) - 1) s' where
 
 proving :: Ord i =>
     [(Int, Type i)] -> Set.Set i -> Type i -> StateT Int [] (Term String)
-proving env hist (TVar ident) | Set.member ident hist = lift []
+proving env hist (TVar tident) | Set.member tident hist = lift []
 proving env hist (TVar tident) = do
     (eident, (args, _)) <-
         lift $ filter ((tident ==) . snd . snd) $ map (second destructType) env
@@ -70,9 +71,12 @@ proving env hist (TFun t1 t2) = do
 
 main :: IO ()
 main = do
-    contents <- BS.getContents
+    contents <- BS.getLine
     case feed (parse typeParser contents) BS.empty of
-        Done _ result -> mapM_ (putStrLn . flip (termPpr (++) LambdaTermL) "")
-            (evalStateT (proving [] Set.empty result) 0)
+        Done _ result -> do
+            mapM_ (putStrLn . flip (termPpr (++) LambdaTermL) "")
+                (evalStateT (proving [] Set.empty result) 0)
+            putStr "\n"
         err -> print err
+    isEOF >>= (`unless` main)
 
