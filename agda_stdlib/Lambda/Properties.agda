@@ -126,7 +126,7 @@ shiftShifted d c (tabs t) = sabs (shiftShifted d (suc c) t)
 nshiftShifted : ∀ n t → Shifted n 0 (nshift n t)
 nshiftShifted n t rewrite nshiftFold n t = shiftShifted n 0 t
 
-betaShifted : ∀ n t1 t2 → Shifted 1 n (t1 [ n := nshift (suc n) t2 ])
+betaShifted : ∀ n t1 t2 → Shifted 1 n (t1 [ n ≔ nshift (suc n) t2 ])
 betaShifted n (tvar n') t2 with n ≟ n' | StrictTotalOrder.compare strictTotalOrder n n'
 ...| yes p | _ = weakShifted n $ nshiftShifted (suc n) t2
 ...| no p1 | tri< p2 _ _ =
@@ -140,12 +140,27 @@ betaShifted n (tvar n') t2 with n ≟ n' | StrictTotalOrder.compare strictTotalO
 betaShifted n (tapp t1 t2) t3 = sapp (betaShifted n t1 t3) (betaShifted n t2 t3)
 betaShifted n (tabs t1) t2 = sabs $ betaShifted (suc n) t1 t2
 
-betaShifted' : ∀ n t1 t2 → Shifted 1 n (t1 [ n := shift (suc n) 0 t2 ])
+betaShifted' : ∀ n t1 t2 → Shifted 1 n (t1 [ n ≔ shift (suc n) 0 t2 ])
 betaShifted' n t1 t2 rewrite sym (nshiftFold (suc n) t2) = betaShifted n t1 t2
 
-shiftSwap : ∀ d c d' c' → c ≤ c' → ∀ t →
+substShiftedCancel :
+  ∀ {d c n t1 t2} → c ≤ n → n < c + d → Shifted d c t1 → t1 ≡ t1 [ n ≔ t2 ]
+substShiftedCancel {d} {c} {n} {tvar n'} {t2} p1 p2 p3 with n ≟ n' | p3
+...| yes p4 | svar1 p5 rewrite p4  = ⊥-elim $ 1+n≰n $
+  begin suc n' ≤⟨ p5 ⟩ c ≤⟨ p1 ⟩ n' ∎
+  where open ≤-Reasoning
+...| yes p4 | svar2 p5 p6 rewrite p4 = ⊥-elim $ 1+n≰n $
+  begin suc c + d ≤⟨ s≤s p5 ⟩ suc n' ≤⟨ p2 ⟩ c + d ∎
+  where open ≤-Reasoning
+...| no p4 | _ = refl
+substShiftedCancel p1 p2 (sapp p3 p4) =
+  cong₂ tapp (substShiftedCancel p1 p2 p3) (substShiftedCancel p1 p2 p4)
+substShiftedCancel p1 p2 (sabs p3) =
+  cong tabs $ substShiftedCancel (s≤s p1) (s≤s p2) p3
+
+shiftShiftSwap : ∀ d c d' c' → c ≤ c' → ∀ t →
             shift d c (shift d' c' t) ≡ shift d' (c' + d) (shift d c t)
-shiftSwap d c d' c' p (tvar n) = r where
+shiftShiftSwap d c d' c' p (tvar n) = r where
   open ≤-Reasoning
   r : shift d c (shift d' c' (tvar n)) ≡ shift d' (c' + d) (shift d c (tvar n))
   r with c ≤? n | c' ≤? n
@@ -166,13 +181,14 @@ shiftSwap d c d' c' p (tvar n) = r where
   r | no p1 | no p2 | no p3 | yes p4 = ⊥-elim $ p2 $
     begin c' ≤⟨ m≤m+n c' d ⟩ c' + d ≤⟨ p4 ⟩ n ∎
   r | no p1 | no p2 | no p3 | no p4 = refl
-shiftSwap d c d' c' p (tapp t1 t2) =
-  cong₂ tapp (shiftSwap d c d' c' p t1) (shiftSwap d c d' c' p t2)
-shiftSwap d c d' c' p (tabs t) = cong tabs (shiftSwap d (suc c) d' (suc c') (s≤s p) t)
+shiftShiftSwap d c d' c' p (tapp t1 t2) =
+  cong₂ tapp (shiftShiftSwap d c d' c' p t1) (shiftShiftSwap d c d' c' p t2)
+shiftShiftSwap d c d' c' p (tabs t) =
+  cong tabs (shiftShiftSwap d (suc c) d' (suc c') (s≤s p) t)
 
-unshiftSwap : ∀ {d c d' c' t} → c' ≤ c → Shifted d' c' t →
+shiftUnshiftSwap : ∀ {d c d' c' t} → c' ≤ c → Shifted d' c' t →
               shift d c (unshift d' c' t) ≡ unshift d' c' (shift d (c + d') t)
-unshiftSwap {d} {c} {d'} {c'} {tvar n} p1 p2 = r where
+shiftUnshiftSwap {d} {c} {d'} {c'} {tvar n} p1 p2 = r where
   open ≤-Reasoning
   r : shift d c (unshift d' c' (tvar n)) ≡ unshift d' c' (shift d (c + d') (tvar n))
   r with c' ≤? n | (c + d') ≤? n
@@ -199,15 +215,17 @@ unshiftSwap {d} {c} {d'} {c'} {tvar n} p1 p2 = r where
   r | no p3 | no p4 | no p5 | yes p6 = ⊥-elim $ p5 $
     begin c' ≤⟨ p1 ⟩ c ≤⟨ p6 ⟩ n ∎
   r | no p3 | no p4 | no p5 | no p6 = refl
-unshiftSwap p1 (sapp p2 p3) = cong₂ tapp (unshiftSwap p1 p2) (unshiftSwap p1 p3)
-unshiftSwap p1 (sabs p2) = cong tabs (unshiftSwap (s≤s p1) p2)
+shiftUnshiftSwap p1 (sapp p2 p3) =
+  cong₂ tapp (shiftUnshiftSwap p1 p2) (shiftUnshiftSwap p1 p3)
+shiftUnshiftSwap p1 (sabs p2) =
+  cong tabs (shiftUnshiftSwap (s≤s p1) p2)
 
 shiftSubstSwap :
-  ∀ d c n → n < c → ∀ t1 t2 →
-  shift d c (t1 [ n := t2 ]) ≡ shift d c t1 [ n := shift d c t2 ]
-shiftSubstSwap d c n p (tvar n') t = r where
+  ∀ {d c n} → n < c → ∀ t1 t2 →
+  shift d c (t1 [ n ≔ t2 ]) ≡ shift d c t1 [ n ≔ shift d c t2 ]
+shiftSubstSwap {d} {c} {n} p (tvar n') t = r where
   open ≤-Reasoning
-  r : shift d c (tvar n' [ n := t ]) ≡ shift d c (tvar n') [ n := shift d c t ]
+  r : shift d c (tvar n' [ n ≔ t ]) ≡ shift d c (tvar n') [ n ≔ shift d c t ]
   r with n ≟ n' | c ≤? n'
   r | yes p1 | yes p2 with n ≟ n' + d
   r | yes p1 | yes p2 | yes p3 = refl
@@ -229,10 +247,42 @@ shiftSubstSwap d c n p (tvar n') t = r where
   r | no p1 | no p2 | yes p3 | _ = ⊥-elim $ p1 p3
   r | no p1 | no p2 | _ | yes p4 = ⊥-elim $ p2 p4
   r | no p1 | no p2 | no p3 | no p4 = refl
-shiftSubstSwap d c n p (tapp t1 t2) t3 =
-  cong₂ tapp (shiftSubstSwap d c n p t1 t3) (shiftSubstSwap d c n p t2 t3)
-shiftSubstSwap d c n p (tabs t1) t2 rewrite shiftSwap 1 0 d c z≤n t2 | +-comm c 1 =
-  cong tabs $ shiftSubstSwap d (suc c) (suc n) (s≤s p) t1 (shift 1 0 t2)
+shiftSubstSwap p (tapp t1 t2) t3 =
+  cong₂ tapp (shiftSubstSwap p t1 t3) (shiftSubstSwap p t2 t3)
+shiftSubstSwap {d} {c} {n} p (tabs t1) t2
+  rewrite shiftShiftSwap 1 0 d c z≤n t2 | +-comm c 1 =
+  cong tabs $ shiftSubstSwap (s≤s p) t1 (shift 1 0 t2)
+
+shiftSubstSwap' :
+  ∀ {d c n} → c ≤ n → ∀ t1 t2 →
+  shift d c (t1 [ n ≔ t2 ]) ≡ shift d c t1 [ n + d ≔ shift d c t2 ]
+shiftSubstSwap' {d} {c} {n} p1 (tvar n') t = r where
+  r : shift d c (tvar n' [ n ≔ t ]) ≡ shift d c (tvar n') [ n + d ≔ shift d c t ]
+  r with n ≟ n' | c ≤? n'
+  r | yes p2 | yes p3 with n + d ≟ n' + d
+  r | yes p2 | yes p3 | yes p4 = refl
+  r | yes p2 | yes p3 | no p4 = ⊥-elim $ p4 $ cong (λ n → n + d) p2
+  r | yes p2 | no p3 rewrite sym p2 = ⊥-elim $ p3 p1
+  r | no p2 | yes p3 with c ≤? n' | n + d ≟ n' + d
+  r | no p2 | yes p3 | yes p4 | yes p5 = ⊥-elim $ p2 $ begin
+    n ≡⟨ sym (m+n∸n≡m n d) ⟩
+    n + d ∸ d ≡⟨ cong (λ n → n ∸ d) p5 ⟩
+    n' + d ∸ d ≡⟨ m+n∸n≡m n' d ⟩
+    n' ∎
+    where open ≡-Reasoning
+  r | no p2 | yes p3 | yes p4 | no p5 = refl
+  r | no p2 | yes p3 | no p4 | _ = ⊥-elim $ p4 p3
+  r | no p2 | no p3 with c ≤? n' | n + d ≟ n'
+  r | no p2 | no p3 | yes p4 | _ = ⊥-elim $ p3 p4
+  r | no p2 | no p3 | no p4 | yes p5 = ⊥-elim $ p3 $ begin
+    c ≤⟨ p1 ⟩ n ≤⟨ m≤m+n n d ⟩ n + d ≡⟨ p5 ⟩ n' ∎
+    where open ≤-Reasoning
+  r | no p2 | no p3 | no p4 | no p5 = refl
+shiftSubstSwap' p1 (tapp t1 t2) t3 =
+  cong₂ tapp (shiftSubstSwap' p1 t1 t3) (shiftSubstSwap' p1 t2 t3)
+shiftSubstSwap' {d} {c} {n} p1 (tabs t1) t2
+  rewrite shiftShiftSwap 1 0 d c z≤n t2 | +-comm c 1 =
+  cong tabs $ shiftSubstSwap' (s≤s p1) t1 (shift 1 0 t2)
 
 unshiftShiftSetoff : ∀ {d c d' c'} t → c ≤ c' → c' ≤ d' + d + c →
                      unshift d' c' (shift (d' + d) c t) ≡ shift d c t
@@ -269,12 +319,12 @@ unshiftShiftSetoff {d} {c} {d'} {c'} (tabs t) p1 p2 =
 
 unshiftSubstSwap :
   ∀ {c n} t1 t2 → c ≤ n → Shifted 1 c t1 →
-  unshift 1 c (t1 [ suc n := shift (suc c) 0 t2 ]) ≡
-  unshift 1 c t1 [ n := shift c 0 t2 ]
+  unshift 1 c (t1 [ suc n ≔ shift (suc c) 0 t2 ]) ≡
+  unshift 1 c t1 [ n ≔ shift c 0 t2 ]
 unshiftSubstSwap {c} {n} (tvar n') t2 p1 p2 = r where
   open ≤-Reasoning
-  r : unshift 1 c (tvar n' [ suc n := shift (suc c) 0 t2 ]) ≡
-      unshift 1 c (tvar n') [ n := shift c 0 t2 ]
+  r : unshift 1 c (tvar n' [ suc n ≔ shift (suc c) 0 t2 ]) ≡
+      unshift 1 c (tvar n') [ n ≔ shift c 0 t2 ]
   r with suc n ≟ n' | c ≤? n'
   r | yes p3 | yes p4 with n ≟ n' ∸ 1
   r | yes p3 | yes p4 | yes p5 = unshiftShiftSetoff t2 z≤n $
@@ -304,62 +354,39 @@ unshiftSubstSwap {c} {n} (tabs t1) t2 p1 (sabs p2)
   rewrite shiftAdd 1 (suc c) 0 t2 | shiftAdd 1 c 0 t2 =
   cong tabs $ unshiftSubstSwap t1 t2 (s≤s p1) p2
 
+substSubstSwap :
+  ∀ n m t1 t2 t3 →
+  t1 [ m ≔ shift (suc m) 0 t2 ] [ suc m + n ≔ shift (suc m) 0 t3 ] ≡
+  t1 [ suc m + n ≔ shift (suc m) 0 t3 ] [ m ≔ shift (suc m) 0 (t2 [ n ≔ t3 ])]
+substSubstSwap n m (tvar n') t2 t3 = r where
+  r : tvar n' [ m ≔ shift (suc m) 0 t2 ] [ suc m + n ≔ shift (suc m) 0 t3 ] ≡
+      tvar n' [ suc m + n ≔ shift (suc m) 0 t3 ] [ m ≔ shift (suc m) 0 (t2 [ n ≔ t3 ])]
+  r with m ≟ n' | suc (m + n) ≟ n'
+  r | yes p1 | yes p2 rewrite p1 = ⊥-elim $ m≢1+m+n n' $ sym p2
+  r | yes p1 | no p2 with m ≟ n'
+  r | yes p1 | no p2 | yes p3 rewrite +-comm (suc m) n =
+    sym $ shiftSubstSwap' z≤n t2 t3
+  r | yes p1 | no p2 | no p3 = ⊥-elim $ p3 p1
+  r | no p1 | yes p2 with suc (m + n) ≟ n'
+  r | no p1 | yes p2 | yes p3 =
+    substShiftedCancel z≤n (≤′⇒≤ ≤′-refl) (shiftShifted (suc m) 0 t3)
+  r | no p1 | yes p2 | no p3 = ⊥-elim $ p3 p2
+  r | no p1 | no p2 with m ≟ n' | suc (m + n) ≟ n'
+  r | no p1 | no p2 | yes p3 | _ = ⊥-elim $ p1 p3
+  r | no p1 | no p2 | _ | yes p4 = ⊥-elim $ p2 p4
+  r | no p1 | no p2 | no p3 | no p4 = refl
+substSubstSwap n m (tapp t1l t1r) t2 t3 =
+  cong₂ tapp (substSubstSwap n m t1l t2 t3) (substSubstSwap n m t1r t2 t3)
+substSubstSwap n m (tabs t1) t2 t3 rewrite
+    shiftAdd 1 (suc m) 0 t2 |
+    shiftAdd 1 (suc m) 0 t3 |
+    shiftAdd 1 (suc m) 0 (t2 [ n ≔ t3 ]) =
+  cong tabs $ substSubstSwap n (suc m) t1 t2 t3
+
 unshiftSubstSwap' :
   ∀ {n} t1 t2 → Shifted 1 0 t1 →
-  unshift 1 0 (t1 [ suc n := shift 1 0 t2 ]) ≡ unshift 1 0 t1 [ n := t2 ]
+  unshift 1 0 (t1 [ suc n ≔ shift 1 0 t2 ]) ≡ unshift 1 0 t1 [ n ≔ t2 ]
 unshiftSubstSwap' {n} t1 t2 p
-  rewrite cong (λ t2 → unshift 1 0 t1 [ n := t2 ]) (shiftZero 0 t2) =
+  rewrite cong (λ t2 → unshift 1 0 t1 [ n ≔ t2 ]) (shiftZero 0 t2) =
   unshiftSubstSwap t1 t2 z≤n p
 
-{-
-unshiftShiftId : ∀ {d c t} → t ≡ unshift d (c + d) (shift d c t)
-unshiftShiftId {d} {c} {tvar n} = r where
-  open ≤-Reasoning
-  r : tvar n ≡ unshift d (c + d) (shift d c (tvar n))
-  r with c ≤? n
-  r | yes p1 with (c + d) ≤? (n + d)
-  r | yes p1 | yes p2 = cong tvar $ sym $ m+n∸n≡m n d
-  r | yes p1 | no p2 = ⊥-elim $ p2 $ ≤-addR d p1
-  r | no p1 with (c + d) ≤? n
-  r | no p1 | yes p2 = ⊥-elim $ p1 $
-    begin
-      c ≤⟨ m≤m+n c d ⟩
-      c + d ≤⟨ p2 ⟩
-      n ∎
-  r | no p1 | no p2 = refl
-unshiftShiftId {d} {c} {tapp t1 t2} = cong₂ tapp unshiftShiftId unshiftShiftId
-unshiftShiftId {d} {c} {tabs t} = cong tabs unshiftShiftId
-
-shiftUnshiftId : ∀ {d c t} →
-                 Shifted d c t → t ≡ shift d c (unshift d (c + d) t)
-shiftUnshiftId {d} {c} {tvar n} (svar1 p1) = r where
-  open ≤-Reasoning
-  r : tvar n ≡ shift d c (unshift d (c + d) (tvar n))
-  r with (c + d) ≤? n
-  r | yes p2 with c ≤? (n ∸ d)
-  r | yes p2 | yes p3 rewrite +-comm (n ∸ d) d =
-    cong tvar $ sym $ m+n∸m≡n $ a+b≤c→b≤c c p2
-  r | yes p2 | no p3 = ⊥-elim $ n+m≮n $
-    begin
-      suc (c + d) ≤⟨ s≤s p2 ⟩
-      suc n ≤⟨ p1 ⟩
-      c ∎
-  r | no p2 with c ≤? n
-  r | no p2 | yes p3 = ⊥-elim $ 1+n≰n {n} $
-    begin
-      suc n ≤⟨ p1 ⟩
-      c ≤⟨ p3 ⟩
-      n ∎
-  r | no p2 | no p3 = refl
-shiftUnshiftId {d} {c} {tvar n} (svar2 p1 p2) = r where
-  r : tvar n ≡ shift d c (unshift d (c + d) (tvar n))
-  r with (c + d) ≤? n
-  r | yes p3 with c ≤? (n ∸ d)
-  r | yes p3 | yes p4 rewrite +-comm (n ∸ d) d = cong tvar $ sym $ m+n∸m≡n p2
-  r | yes p3 | no p4 = ⊥-elim $ p4 $ a+b≤c→a≤c∸b p3
-  r | no p3 with c ≤? n
-  r | no p3 | yes p4 = ⊥-elim $ p3 p1
-  r | no p3 | no p4 = refl
-shiftUnshiftId (sapp p1 p2) = cong₂ tapp (shiftUnshiftId p1) (shiftUnshiftId p2)
-shiftUnshiftId (sabs p) = cong tabs (shiftUnshiftId p)
--}

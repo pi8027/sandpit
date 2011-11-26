@@ -35,15 +35,15 @@ nshift : ℕ → Term → Term
 nshift 0 t = t
 nshift (suc n) t = shift 1 0 $ nshift n t
 
-_[_:=_] : Term → ℕ → Term → Term
-tvar n' [ n := t ] with n ≟ n'
+_[_≔_] : Term → ℕ → Term → Term
+tvar n' [ n ≔ t ] with n ≟ n'
 ...| yes p = t
 ...| no p = tvar n'
-tapp t1 t2 [ n := t ] = tapp (t1 [ n := t ]) (t2 [ n := t ])
-tabs t1 [ n := t ] = tabs $ t1 [ suc n := shift 1 0 t ]
+tapp t1 t2 [ n ≔ t ] = tapp (t1 [ n ≔ t ]) (t2 [ n ≔ t ])
+tabs t1 [ n ≔ t ] = tabs $ t1 [ suc n ≔ shift 1 0 t ]
 
 data _→β_ : Rel Term Level.zero where
-  →βbeta : ∀ {t1 t2} → tapp (tabs t1) t2 →β unshift 1 0 (t1 [ 0 := shift 1 0 t2 ])
+  →βbeta : ∀ {t1 t2} → tapp (tabs t1) t2 →β unshift 1 0 (t1 [ 0 ≔ shift 1 0 t2 ])
   →βappl : ∀ {t1 t1' t2} → t1 →β t1' → tapp t1 t2 →β tapp t1' t2
   →βappr : ∀ {t1 t2 t2'} → t2 →β t2' → tapp t1 t2 →β tapp t1 t2'
   →βabs  : ∀ {t t'} → t →β t' → tabs t →β tabs t'
@@ -60,5 +60,5 @@ data _→βP_ : Rel Term Level.zero where
   →βPapp : ∀ {t1 t1' t2 t2'} → t1 →βP t1' → t2 →βP t2' → tapp t1 t2 →βP tapp t1' t2'
   →βPabs : ∀ {t t'} → t →βP t' → tabs t →βP tabs t'
   →βPbeta : ∀ {t1 t1' t2 t2'} → t1 →βP t1' → t2 →βP t2' →
-            tapp (tabs t1) t2 →βP unshift 1 0 (t1' [ 0 := shift 1 0 t2' ])
+            tapp (tabs t1) t2 →βP unshift 1 0 (t1' [ 0 ≔ shift 1 0 t2' ])
 
