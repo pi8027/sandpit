@@ -1,5 +1,5 @@
 
-module Lambda.Confluence where
+module Lambda.DeBruijn.Confluence where
 
 open import Function
 open import Data.Nat
@@ -8,8 +8,8 @@ open import Relation.Nullary
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
 
-open import Lambda.Core
-open import Lambda.Properties
+open import Lambda.DeBruijn.Core
+open import Lambda.DeBruijn.Properties
 
 rtcTrans : ∀ {ℓ} {A : Set ℓ} {rel : Rel A ℓ} {a b c : A} →
            rtclosure rel a b → rtclosure rel b c → rtclosure rel a c
@@ -91,3 +91,15 @@ substLemma {n} {t2 = t3} {t3'} (→βPbeta {t1} {t1'} {t2} {t2'} r1 r2) r3 = r w
     (→β*appl (→β*abs (→βP⊂→β* r1)))
     (rtcTrans (→β*appr (→βP⊂→β* r2)) (rtcs →βbeta rtc0))
 
+starLemma : ∀ {t t'} → t →βP t' → t' →βP t *
+starLemma →βPvar = →βPvar
+starLemma {tapp (tvar n) t2} (→βPapp p1 p2) =
+  →βPapp (starLemma p1) (starLemma p2)
+starLemma {tapp (tapp t1l t1r) t2} (→βPapp p1 p2) =
+  →βPapp (starLemma p1) (starLemma p2)
+starLemma {tapp (tabs t1) t2} {tapp (tvar _) t2'} (→βPapp () p2)
+starLemma {tapp (tabs t1) t2} {tapp (tapp _ _) t2'} (→βPapp () p2)
+starLemma {tapp (tabs t1) t2} {tapp (tabs t1') t2'} (→βPapp (→βPabs p1) p2) =
+  →βPbeta (starLemma p1) (starLemma p2)
+starLemma (→βPabs p1) = →βPabs (starLemma p1)
+starLemma {tapp (tabs t1) t2} (→βPbeta p1 p2) = {!!}

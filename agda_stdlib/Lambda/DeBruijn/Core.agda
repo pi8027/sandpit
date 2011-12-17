@@ -1,5 +1,5 @@
 
-module Lambda.Core where
+module Lambda.DeBruijn.Core where
 
 import Level
 open import Function
@@ -62,3 +62,8 @@ data _→βP_ : Rel Term Level.zero where
   →βPbeta : ∀ {t1 t1' t2 t2'} → t1 →βP t1' → t2 →βP t2' →
             tapp (tabs t1) t2 →βP unshift 1 0 (t1' [ 0 ≔ shift 1 0 t2' ])
 
+_* : Term → Term
+tvar n * = tvar n
+tapp (tabs t1) t2 * = unshift 1 0 (t1 * [ 0 ≔ shift 1 0 (t2 *) ])
+tapp t1 t2 * = tapp (t1 *) (t2 *)
+tabs t * = tabs (t *)

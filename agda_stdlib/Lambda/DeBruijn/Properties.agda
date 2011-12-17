@@ -1,5 +1,5 @@
 
-module Lambda.Properties where
+module Lambda.DeBruijn.Properties where
 
 open import Function
 open import Algebra
@@ -10,7 +10,7 @@ open import Relation.Nullary
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
 
-open import Lambda.Core
+open import Lambda.DeBruijn.Core
 
 +-comm = CommutativeSemiring.+-comm commutativeSemiring
 +-assoc = CommutativeSemiring.+-assoc commutativeSemiring
