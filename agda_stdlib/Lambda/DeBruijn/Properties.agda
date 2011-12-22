@@ -187,7 +187,7 @@ shiftShiftSwap d c d' c' p (tabs t) =
   cong tabs (shiftShiftSwap d (suc c) d' (suc c') (s≤s p) t)
 
 shiftUnshiftSwap : ∀ {d c d' c' t} → c' ≤ c → Shifted d' c' t →
-              shift d c (unshift d' c' t) ≡ unshift d' c' (shift d (c + d') t)
+                   shift d c (unshift d' c' t) ≡ unshift d' c' (shift d (c + d') t)
 shiftUnshiftSwap {d} {c} {d'} {c'} {tvar n} p1 p2 = r where
   open ≤-Reasoning
   r : shift d c (unshift d' c' (tvar n)) ≡ unshift d' c' (shift d (c + d') (tvar n))

@@ -38,14 +38,30 @@ shiftLemma →βPvar = parRefl
 shiftLemma (→βPapp r1 r2) = →βPapp (shiftLemma r1) (shiftLemma r2)
 shiftLemma (→βPabs r) = →βPabs (shiftLemma r)
 shiftLemma {d = d} {c} (→βPbeta {t1} {t1'} {t2} {t2'} r1 r2) = r where
+  open ≡-Reasoning
   eq : ∀ d c t1 t2 →
        shift d c (unshift 1 0 (t1 [ 0 ≔ shift 1 0 t2 ])) ≡
        unshift 1 0 (shift d (suc c) t1 [ 0 ≔ shift 1 0 (shift d c t2) ])
-  eq d c t1 t2 rewrite
-      shiftShiftSwap 1 0 d c z≤n t2 |
-      shiftUnshiftSwap {d} {c} {1} {0} z≤n (betaShifted' 0 t1 t2) |
-      +-comm c 1 |
-      shiftSubstSwap {d} {suc c} {0} (m≤m+n 1 c) t1 (shift 1 0 t2) = refl
+  eq d c t1 t2 = begin
+    shift d c (unshift 1 0 (t1 [ 0 ≔ shift 1 0 t2 ]))
+      ≡⟨ shiftUnshiftSwap z≤n (betaShifted' 0 t1 t2) ⟩
+    unshift 1 0 (shift d (c + 1) (t1 [ 0 ≔ shift 1 0 t2 ]))
+      ≡⟨ cong (unshift 1 0) $ begin
+        shift d (c + 1) (t1 [ 0 ≔ shift 1 0 t2 ])
+          ≡⟨ cong (λ c → shift d c (t1 [ 0 ≔ shift 1 0 t2 ])) (+-comm c 1) ⟩
+        shift d (suc c) (t1 [ 0 ≔ shift 1 0 t2 ])
+          ≡⟨ shiftSubstSwap (m≤m+n 1 c) t1 (shift 1 0 t2) ⟩
+        shift d (suc c) t1 [ 0 ≔ shift d (suc c) (shift 1 0 t2) ]
+          ≡⟨ cong (λ t → shift d (suc c) t1 [ 0 ≔ t ]) $ begin
+            shift d (suc c) (shift 1 0 t2)
+              ≡⟨ cong (λ c → shift d c (shift 1 0 t2)) (+-comm 1 c) ⟩
+            shift d (c + 1) (shift 1 0 t2)
+              ≡⟨ sym (shiftShiftSwap 1 0 d c z≤n t2) ⟩
+            shift 1 0 (shift d c t2) ∎
+          ⟩
+        shift d (suc c) t1 [ 0 ≔ shift 1 0 (shift d c t2) ] ∎
+      ⟩
+    unshift 1 0 (shift d (suc c) t1 [ 0 ≔ shift 1 0 (shift d c t2) ]) ∎
   r : shift d c (tapp (tabs t1) t2) →βP
       shift d c (unshift 1 0 (t1' [ 0 ≔ shift 1 0 t2' ]))
   r rewrite eq d c t1' t2' = →βPbeta (shiftLemma r1) (shiftLemma r2)
@@ -66,11 +82,7 @@ substLemma {n} {t2 = t3} {t3'} (→βPbeta {t1} {t1'} {t2} {t2'} r1 r2) r3 = r w
     unshift 1 0 (t1 [ 0 ≔ shift 1 0 t2 ]) [ n ≔ t3 ]
       ≡⟨ sym (unshiftSubstSwap' (t1 [ 0 ≔ shift 1 0 t2 ]) t3 (betaShifted' 0 t1 t2)) ⟩
     unshift 1 0 (t1 [ 0 ≔ shift 1 0 t2 ] [ suc n ≔ shift 1 0 t3 ])
-      ≡⟨ cong (unshift 1 0) $ begin
-        t1 [ 0 ≔ shift 1 0 t2 ] [ suc n ≔ shift 1 0 t3 ]
-          ≡⟨ substSubstSwap n 0 t1 t2 t3 ⟩
-        t1 [ suc n ≔ shift 1 0 t3 ] [ 0 ≔ shift 1 0 (t2 [ n ≔ t3 ]) ] ∎
-       ⟩
+      ≡⟨ cong (unshift 1 0) $ substSubstSwap n 0 t1 t2 t3 ⟩
     unshift 1 0 ((t1 [ suc n ≔ shift 1 0 t3 ]) [ 0 ≔ shift 1 0 (t2 [ n ≔ t3 ]) ]) ∎
   r : tapp (tabs (t1 [ suc n ≔ shift 1 0 t3 ])) (t2 [ n ≔ t3 ]) →βP
       (unshift 1 0 (t1' [ 0 ≔ shift 1 0 t2' ])) [ n ≔ t3' ]
