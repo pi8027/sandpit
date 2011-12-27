@@ -70,6 +70,15 @@ a-b+c≡a+c-b {suc a} {suc b} {c} (s≤s p) = a-b+c≡a+c-b p
 ≡-addL' z≤n p2 = p2
 ≡-addL' {suc a} {b} {suc c} (s≤s p1) p2 = cong suc $ ≡-addL' p1 p2
 
+a∸b∸c≡a∸c∸b : ∀ a b c → a ∸ b ∸ c ≡ a ∸ c ∸ b
+a∸b∸c≡a∸c∸b a b c =
+  begin
+    a ∸ b ∸ c ≡⟨ ∸-+-assoc a b c ⟩
+    a ∸ (b + c) ≡⟨ cong (_∸_ a) (+-comm b c) ⟩
+    a ∸ (c + b) ≡⟨ sym (∸-+-assoc a c b) ⟩
+    a ∸ c ∸ b ∎
+  where open ≡-Reasoning
+
 shiftZero : ∀ c t → t ≡ shift 0 c t
 shiftZero c (tvar n) with c ≤? n
 ...| yes p = cong tvar $ +-comm 0 n
@@ -130,11 +139,8 @@ betaShifted : ∀ n t1 t2 → Shifted 1 n (t1 [ n ≔ nshift (suc n) t2 ])
 betaShifted n (tvar n') t2 with n ≟ n' | StrictTotalOrder.compare strictTotalOrder n n'
 ...| yes p | _ = weakShifted n $ nshiftShifted (suc n) t2
 ...| no p1 | tri< p2 _ _ =
-  svar2 p2' $ begin 1 ≤⟨ s≤s z≤n ⟩ suc n ≤⟨ p2 ⟩ n' ∎
-  where
-  open ≤-Reasoning
-  p2' : n + 1 ≤ n'
-  p2' rewrite +-comm n 1 = p2
+  svar2 (subst (λ n → n ≤ n') (+-comm 1 n) p2) (begin 1 ≤⟨ s≤s z≤n ⟩ suc n ≤⟨ p2 ⟩ n' ∎)
+  where open ≤-Reasoning
 ...| no p1 | tri≈ _ p2 _ = ⊥-elim $ p1 p2
 ...| no p1 | tri> _ _ p2 = svar1 p2
 betaShifted n (tapp t1 t2) t3 = sapp (betaShifted n t1 t3) (betaShifted n t2 t3)
@@ -354,6 +360,13 @@ unshiftSubstSwap {c} {n} (tabs t1) t2 p1 (sabs p2)
   rewrite shiftAdd 1 (suc c) 0 t2 | shiftAdd 1 c 0 t2 =
   cong tabs $ unshiftSubstSwap t1 t2 (s≤s p1) p2
 
+unshiftSubstSwap' :
+  ∀ {n} t1 t2 → Shifted 1 0 t1 →
+  unshift 1 0 (t1 [ suc n ≔ shift 1 0 t2 ]) ≡ unshift 1 0 t1 [ n ≔ t2 ]
+unshiftSubstSwap' {n} t1 t2 p
+  rewrite cong (λ t2 → unshift 1 0 t1 [ n ≔ t2 ]) (shiftZero 0 t2) =
+  unshiftSubstSwap t1 t2 z≤n p
+
 substSubstSwap :
   ∀ n m t1 t2 t3 →
   t1 [ m ≔ shift (suc m) 0 t2 ] [ suc m + n ≔ shift (suc m) 0 t3 ] ≡
@@ -383,10 +396,57 @@ substSubstSwap n m (tabs t1) t2 t3 rewrite
     shiftAdd 1 (suc m) 0 (t2 [ n ≔ t3 ]) =
   cong tabs $ substSubstSwap n (suc m) t1 t2 t3
 
-unshiftSubstSwap' :
-  ∀ {n} t1 t2 → Shifted 1 0 t1 →
-  unshift 1 0 (t1 [ suc n ≔ shift 1 0 t2 ]) ≡ unshift 1 0 t1 [ n ≔ t2 ]
-unshiftSubstSwap' {n} t1 t2 p
-  rewrite cong (λ t2 → unshift 1 0 t1 [ n ≔ t2 ]) (shiftZero 0 t2) =
-  unshiftSubstSwap t1 t2 z≤n p
+unshiftUnshiftSwap :
+  ∀ {d c d' c' t} → c' ≤ c → Shifted d' c' t → Shifted d c (unshift d' c' t) →
+  unshift d c (unshift d' c' t) ≡ unshift d' c' (unshift d (c + d') t)
+unshiftUnshiftSwap {d} {c} {d'} {c'} {t = tvar n} p1 p2 p3 = r where
+  open ≤-Reasoning
+  unshiftVarEq1 : ∀ {d c n} → c ≤ n → unshift d c (tvar n) ≡ tvar (n ∸ d)
+  unshiftVarEq1 {d} {c} {n} p with c ≤? n
+  ...| yes p' = refl
+  ...| no p' = ⊥-elim $ p' p
+  r : unshift d c (unshift d' c' (tvar n)) ≡
+      unshift d' c' (unshift d (c + d') (tvar n))
+  r with c' ≤? n | (c + d') ≤? n
+  r | yes p4 | yes p5 with c ≤? (n ∸ d') | c' ≤? (n ∸ d)
+  r | yes p4 | yes p5 | yes p6 | yes p7 = cong tvar $ a∸b∸c≡a∸c∸b n d' d
+  r | yes p4 | yes p5 | yes p6 | no p7 with p2 | subst (Shifted d c) (unshiftVarEq1 p4) p3
+  r | yes p4 | yes p5 | yes p6 | no p7 | svar1 p8 | _ =
+    ⊥-elim $ 1+n≰n $ begin suc n ≤⟨ p8 ⟩ c' ≤⟨ p4 ⟩ n ∎
+  r | yes p4 | yes p5 | yes p6 | no p7 | _ | svar1 p8 =
+    ⊥-elim $ 1+n≰n $ begin suc (n ∸ d') ≤⟨ p8 ⟩ c ≤⟨ p6 ⟩ n ∸ d' ∎
+  r | yes p4 | yes p5 | yes p6 | no p7 | svar2 p8 p9 | svar2 p10 p11 = ⊥-elim $ p7 $
+    begin
+      c' ≤⟨ p1 ⟩
+      c ≤⟨ ≤-subR' d p10 ⟩
+      n ∸ d' ∸ d ≡⟨ a∸b∸c≡a∸c∸b n d' d ⟩
+      n ∸ d ∸ d' ≤⟨ n∸m≤n d' (n ∸ d) ⟩
+      n ∸ d ∎
+  r | yes p4 | yes p5 | no p6 | _ = ⊥-elim $ p6 $ ≤-subR' d' p5
+  r | yes p4 | no p5 with c' ≤? n | c ≤? (n ∸ d')
+  r | yes p4 | no p5 | yes p6 | yes p7 with p2
+  r | yes p4 | no p5 | yes p6 | yes p7 | svar1 p8 =
+    ⊥-elim $ 1+n≰n $ begin suc n ≤⟨ p8 ⟩ c' ≤⟨ p4 ⟩ n ∎
+  r | yes p4 | no p5 | yes p6 | yes p7 | svar2 p8 p9 = ⊥-elim $ p5 $ ≤-addR' d' p9 p7
+  r | yes p4 | no p5 | yes p6 | no p7 = refl
+  r | yes p4 | no p5 | no p6 | _ = ⊥-elim $ p6 p4
+  r | no p4 | yes p5 with c ≤? n | c' ≤? (n ∸ d)
+  r | no p4 | yes p5 | yes p6 | yes p7 =
+    ⊥-elim $ p4 $ begin c' ≤⟨ p1 ⟩ c ≤⟨ p6 ⟩ n ∎
+  r | no p4 | yes p5 | yes p6 | no p7 = refl
+  r | no p4 | yes p5 | no p6 | yes p7 =
+    ⊥-elim $ p6 $ begin c ≤⟨ m≤m+n c d' ⟩ c + d' ≤⟨ p5 ⟩ n ∎
+  r | no p4 | yes p5 | no p6 | no p7 with p2
+  r | no p4 | yes p5 | no p6 | no p7 | svar1 p8 = ⊥-elim $ 1+n≰n $
+    begin suc c + d' ≤⟨ s≤s p5 ⟩ suc n ≤⟨ p8 ⟩ c' ≤⟨ p1 ⟩ c ≤⟨ m≤m+n c d' ⟩ c + d' ∎
+  r | no p4 | yes p5 | no p6 | no p7 | svar2 p8 p9 =
+    ⊥-elim $ ⊥-elim $ p4 $ begin c' ≤⟨ m≤m+n c' d' ⟩ c' + d' ≤⟨ p8 ⟩ n ∎
+  r | no p4 | no p5 with c' ≤? n | c ≤? n
+  r | no p4 | no p5 | yes p6 | _ = ⊥-elim $ p4 p6
+  r | no p4 | no p5 | no p6 | yes p7 =
+    ⊥-elim $ p4 $ begin c' ≤⟨ p1 ⟩ c ≤⟨ p7 ⟩ n ∎
+  r | no p4 | no p5 | no p6 | no p7 = refl
+unshiftUnshiftSwap p1 (sapp p2 p3) (sapp p4 p5) =
+    cong₂ tapp (unshiftUnshiftSwap p1 p2 p4) (unshiftUnshiftSwap p1 p3 p5)
+unshiftUnshiftSwap p1 (sabs p2) (sabs p3) = cong tabs (unshiftUnshiftSwap (s≤s p1) p2 p3)
 

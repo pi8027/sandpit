@@ -70,9 +70,21 @@ unshiftLemma →βPvar _ = parRefl
 unshiftLemma (→βPapp r1 r2) (sapp s1 s2) = →βPapp (unshiftLemma r1 s1) (unshiftLemma r2 s2)
 unshiftLemma (→βPabs r) (sabs s) = →βPabs (unshiftLemma r s)
 unshiftLemma {d = d} {c} (→βPbeta {t1} {t1'} {t2} {t2'} r1 r2) (sapp (sabs s1) s2) = r where
+  open ≡-Reasoning
   eq : unshift d c (unshift 1 0 (t1' [ 0 ≔ shift 1 0 t2' ])) ≡
        unshift 1 0 (unshift d (suc c) t1' [ 0 ≔ shift 1 0 (unshift d c t2') ])
-  eq = {!!}
+  eq = begin
+    unshift d c (unshift 1 0 (t1' [ 0 ≔ shift 1 0 t2' ]))
+      ≡⟨ unshiftUnshiftSwap {d} {c} {1} {0} z≤n (betaShifted' 0 t1' t2') {!!} ⟩
+    unshift 1 0 (unshift d (c + 1) (t1' [ 0 ≔ shift 1 0 t2' ]))
+      ≡⟨ cong (unshift 1 0) $ begin
+        unshift d (c + 1) (t1' [ 0 ≔ shift 1 0 t2' ])
+          ≡⟨ cong (λ c → unshift d c (t1' [ 0 ≔ shift 1 0 t2' ])) (+-comm c 1) ⟩
+        unshift d (suc c) (t1' [ 0 ≔ shift 1 0 t2' ])
+          ≡⟨ {!!} ⟩
+        unshift d (suc c) t1' [ 0 ≔ shift 1 0 (unshift d c t2') ] ∎
+      ⟩
+    unshift 1 0 (unshift d (suc c) t1' [ 0 ≔ shift 1 0 (unshift d c t2') ]) ∎
   r : tapp (tabs (unshift d (suc c) t1)) (unshift d c t2) →βP
       unshift d c (unshift 1 0 (t1' [ 0 ≔ shift 1 0 t2' ]))
   r rewrite eq = →βPbeta (unshiftLemma r1 s1) (unshiftLemma r2 s2)
