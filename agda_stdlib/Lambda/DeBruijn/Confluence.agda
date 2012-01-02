@@ -33,6 +33,35 @@ parRefl {tvar _} = →βPvar
 parRefl {tapp _ _} = →βPapp parRefl parRefl
 parRefl {tabs _} = →βPabs parRefl
 
+→β⊂→βP : ∀ {t t'} → t →β t' → t →βP t'
+→β⊂→βP →βbeta = →βPbeta parRefl parRefl
+→β⊂→βP (→βappl r) = →βPapp (→β⊂→βP r) parRefl
+→β⊂→βP (→βappr r) = →βPapp parRefl (→β⊂→βP r)
+→β⊂→βP (→βabs r) = →βPabs (→β⊂→βP r)
+
+→βP⊂→β* : ∀ {t t'} → t →βP t' → t →β* t'
+→βP⊂→β* →βPvar = rtc0
+→βP⊂→β* (→βPapp r1 r2) = rtcTrans (→β*appl (→βP⊂→β* r1)) (→β*appr (→βP⊂→β* r2))
+→βP⊂→β* (→βPabs r) = →β*abs (→βP⊂→β* r)
+→βP⊂→β* (→βPbeta r1 r2) =
+  rtcTrans
+    (→β*appl (→β*abs (→βP⊂→β* r1)))
+    (rtcTrans (→β*appr (→βP⊂→β* r2)) (rtcs →βbeta rtc0))
+
+shiftConservation→β : ∀ {d c t1 t2} → t1 →β t2 → Shifted d c t1 → Shifted d c t2
+shiftConservation→β {d} {c} {tapp (tabs t1) t2} →βbeta (sapp (sabs s1) s2) =
+  betaShifted2 s1 s2
+shiftConservation→β (→βappl p) (sapp s1 s2) = sapp (shiftConservation→β p s1) s2
+shiftConservation→β (→βappr p) (sapp s1 s2) = sapp s1 (shiftConservation→β p s2)
+shiftConservation→β (→βabs p) (sabs s1) = sabs (shiftConservation→β p s1)
+
+shiftConservation→β* : ∀ {d c t1 t2} → t1 →β* t2 → Shifted d c t1 → Shifted d c t2
+shiftConservation→β* rtc0 s = s
+shiftConservation→β* (rtcs p1 p2) s = shiftConservation→β* p2 (shiftConservation→β p1 s)
+
+shiftConservation→βP : ∀ {d c t1 t2} → t1 →βP t2 → Shifted d c t1 → Shifted d c t2
+shiftConservation→βP p s = shiftConservation→β* (→βP⊂→β* p) s
+
 shiftLemma : ∀ {t t' d c} → t →βP t' → shift d c t →βP shift d c t'
 shiftLemma →βPvar = parRefl
 shiftLemma (→βPapp r1 r2) = →βPapp (shiftLemma r1) (shiftLemma r2)
@@ -75,13 +104,22 @@ unshiftLemma {d = d} {c} (→βPbeta {t1} {t1'} {t2} {t2'} r1 r2) (sapp (sabs s1
        unshift 1 0 (unshift d (suc c) t1' [ 0 ≔ shift 1 0 (unshift d c t2') ])
   eq = begin
     unshift d c (unshift 1 0 (t1' [ 0 ≔ shift 1 0 t2' ]))
-      ≡⟨ unshiftUnshiftSwap {d} {c} {1} {0} z≤n (betaShifted' 0 t1' t2') {!!} ⟩
+      ≡⟨ unshiftUnshiftSwap z≤n (betaShifted' 0 t1' t2')
+        (betaShifted2 (shiftConservation→βP r1 s1) (shiftConservation→βP r2 s2)) ⟩
     unshift 1 0 (unshift d (c + 1) (t1' [ 0 ≔ shift 1 0 t2' ]))
       ≡⟨ cong (unshift 1 0) $ begin
         unshift d (c + 1) (t1' [ 0 ≔ shift 1 0 t2' ])
           ≡⟨ cong (λ c → unshift d c (t1' [ 0 ≔ shift 1 0 t2' ])) (+-comm c 1) ⟩
         unshift d (suc c) (t1' [ 0 ≔ shift 1 0 t2' ])
           ≡⟨ {!!} ⟩
+        unshift d (suc c) t1' [ 0 ≔ unshift d (suc c) (shift 1 0 t2') ]
+          ≡⟨ cong (λ t → unshift d (suc c) t1' [ 0 ≔ t ]) $ begin
+            unshift d (suc c) (shift 1 0 t2')
+              ≡⟨ cong (λ c → unshift d c (shift 1 0 t2')) (+-comm 1 c) ⟩
+            unshift d (c + 1) (shift 1 0 t2')
+              ≡⟨ {!!} ⟩
+            shift 1 0 (unshift d c t2') ∎
+          ⟩
         unshift d (suc c) t1' [ 0 ≔ shift 1 0 (unshift d c t2') ] ∎
       ⟩
     unshift 1 0 (unshift d (suc c) t1' [ 0 ≔ shift 1 0 (unshift d c t2') ]) ∎
@@ -109,21 +147,6 @@ substLemma {n} {t2 = t3} {t3'} (→βPbeta {t1} {t1'} {t2} {t2'} r1 r2) r3 = r w
   r : tapp (tabs (t1 [ suc n ≔ shift 1 0 t3 ])) (t2 [ n ≔ t3 ]) →βP
       (unshift 1 0 (t1' [ 0 ≔ shift 1 0 t2' ])) [ n ≔ t3' ]
   r rewrite eq = →βPbeta (substLemma r1 (shiftLemma r3)) (substLemma r2 r3)
-
-→β⊂→βP : ∀ {t t'} → t →β t' → t →βP t'
-→β⊂→βP →βbeta = →βPbeta parRefl parRefl
-→β⊂→βP (→βappl r) = →βPapp (→β⊂→βP r) parRefl
-→β⊂→βP (→βappr r) = →βPapp parRefl (→β⊂→βP r)
-→β⊂→βP (→βabs r) = →βPabs (→β⊂→βP r)
-
-→βP⊂→β* : ∀ {t t'} → t →βP t' → t →β* t'
-→βP⊂→β* →βPvar = rtc0
-→βP⊂→β* (→βPapp r1 r2) = rtcTrans (→β*appl (→βP⊂→β* r1)) (→β*appr (→βP⊂→β* r2))
-→βP⊂→β* (→βPabs r) = →β*abs (→βP⊂→β* r)
-→βP⊂→β* (→βPbeta r1 r2) =
-  rtcTrans
-    (→β*appl (→β*abs (→βP⊂→β* r1)))
-    (rtcTrans (→β*appr (→βP⊂→β* r2)) (rtcs →βbeta rtc0))
 
 starLemma : ∀ {t t'} → t →βP t' → t' →βP t *
 starLemma →βPvar = →βPvar
