@@ -2,6 +2,7 @@
 module Lambda.DeBruijn.Confluence where
 
 open import Function
+open import Data.Empty
 open import Data.Nat
 open import Data.Nat.Properties
 open import Relation.Nullary
@@ -62,6 +63,35 @@ shiftConservation→β* (rtcs p1 p2) s = shiftConservation→β* p2 (shiftConser
 shiftConservation→βP : ∀ {d c t1 t2} → t1 →βP t2 → Shifted d c t1 → Shifted d c t2
 shiftConservation→βP p s = shiftConservation→β* (→βP⊂→β* p) s
 
+unshiftShiftSwap :
+  ∀ {d c d' c' t} → c' ≤ c → Shifted d c t →
+  shift d' c' (unshift d c t) ≡ unshift d (c + d') (shift d' c' t)
+unshiftShiftSwap {d} {c} {d'} {c'} {tvar n} p s1 = r where
+  open ≤-Reasoning
+  r : shift d' c' (unshift d c (tvar n)) ≡ unshift d (c + d') (shift d' c' (tvar n))
+  r with c ≤? n | c' ≤? n
+  r | yes p1 | yes p2 with c' ≤? (n ∸ d) | (c + d') ≤? (n + d') | s1
+  r | yes p1 | yes p2 | _ | _ | svar1 p5 =
+    ⊥-elim $ 1+n≰n $ begin suc n ≤⟨ p5 ⟩ c ≤⟨ p1 ⟩ n ∎
+  r | yes p1 | yes p2 | yes p3 | yes p4 | svar2 p5 p6 =
+    cong tvar $ sym $ a+b∸c≡a∸c+b n d' d p6
+  r | yes p1 | yes p2 | no p3 | yes p4 | svar2 p5 p6 = ⊥-elim $ p3 $
+    begin c' ≤⟨ p ⟩ c ≤⟨ ≤-subR' d p5 ⟩ n ∸ d ∎
+  r | yes p1 | yes p2 | _ | no p4 | _ = ⊥-elim $ p4 $ ≤-addR d' p1
+  r | yes p1 | no p2 = ⊥-elim $ p2 $ begin c' ≤⟨ p ⟩ c ≤⟨ p1 ⟩ n ∎
+  r | no p1 | yes p2 with c' ≤? n | (c + d') ≤? (n + d')
+  r | no p1 | yes p2 | yes _ | yes p3 = ⊥-elim $ p1 $ ≤-subR d' p3
+  r | no p1 | yes p2 | yes _ | no p3 = refl
+  r | no p1 | yes p2 | no p3 | _ = ⊥-elim $ p3 p2
+  r | no p1 | no p2 with c' ≤? n | (c + d') ≤? n
+  r | no p1 | no p2 | _ | yes p4 =
+    ⊥-elim $ p1 $ begin c ≤⟨ m≤m+n c d' ⟩ c + d' ≤⟨ p4 ⟩ n ∎
+  r | no p1 | no p2 | yes p3 | no p4 = ⊥-elim $ p2 p3
+  r | no p1 | no p2 | no p3 | no p4 = refl
+unshiftShiftSwap p (sapp s1 s2) =
+  cong₂ tapp (unshiftShiftSwap p s1) (unshiftShiftSwap p s2)
+unshiftShiftSwap p (sabs s1) = cong tabs (unshiftShiftSwap (s≤s p) s1)
+
 shiftLemma : ∀ {t t' d c} → t →βP t' → shift d c t →βP shift d c t'
 shiftLemma →βPvar = parRefl
 shiftLemma (→βPapp r1 r2) = →βPapp (shiftLemma r1) (shiftLemma r2)
@@ -84,7 +114,7 @@ shiftLemma {d = d} {c} (→βPbeta {t1} {t1'} {t2} {t2'} r1 r2) = r where
             shift d (suc c) (shift 1 0 t2')
               ≡⟨ cong (λ c → shift d c (shift 1 0 t2')) (+-comm 1 c) ⟩
             shift d (c + 1) (shift 1 0 t2')
-              ≡⟨ sym (shiftShiftSwap 1 0 d c z≤n t2') ⟩
+              ≡⟨ sym (shiftShiftSwap 1 0 d c t2' z≤n) ⟩
             shift 1 0 (shift d c t2') ∎
           ⟩
         shift d (suc c) t1' [ 0 ≔ shift 1 0 (shift d c t2') ] ∎
@@ -117,7 +147,7 @@ unshiftLemma {d = d} {c} (→βPbeta {t1} {t1'} {t2} {t2'} r1 r2) (sapp (sabs s1
             unshift d (suc c) (shift 1 0 t2')
               ≡⟨ cong (λ c → unshift d c (shift 1 0 t2')) (+-comm 1 c) ⟩
             unshift d (c + 1) (shift 1 0 t2')
-              ≡⟨ {!!} ⟩
+              ≡⟨ sym (unshiftShiftSwap z≤n (shiftConservation→βP r2 s2)) ⟩
             shift 1 0 (unshift d c t2') ∎
           ⟩
         unshift d (suc c) t1' [ 0 ≔ shift 1 0 (unshift d c t2') ] ∎
