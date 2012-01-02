@@ -528,3 +528,31 @@ unshiftUnshiftSwap p1 (sapp p2 p3) (sapp p4 p5) =
     cong₂ tapp (unshiftUnshiftSwap p1 p2 p4) (unshiftUnshiftSwap p1 p3 p5)
 unshiftUnshiftSwap p1 (sabs p2) (sabs p3) = cong tabs (unshiftUnshiftSwap (s≤s p1) p2 p3)
 
+unshiftShiftSwap :
+  ∀ {d c d' c' t} → c' ≤ c → Shifted d c t →
+  shift d' c' (unshift d c t) ≡ unshift d (c + d') (shift d' c' t)
+unshiftShiftSwap {d} {c} {d'} {c'} {tvar n} p s1 = r where
+  open ≤-Reasoning
+  r : shift d' c' (unshift d c (tvar n)) ≡ unshift d (c + d') (shift d' c' (tvar n))
+  r with c ≤? n | c' ≤? n
+  r | yes p1 | yes p2 with c' ≤? (n ∸ d) | (c + d') ≤? (n + d') | s1
+  r | yes p1 | yes p2 | _ | _ | svar1 p5 =
+    ⊥-elim $ 1+n≰n $ begin suc n ≤⟨ p5 ⟩ c ≤⟨ p1 ⟩ n ∎
+  r | yes p1 | yes p2 | yes p3 | yes p4 | svar2 p5 p6 =
+    cong tvar $ sym $ a+b∸c≡a∸c+b n d' d p6
+  r | yes p1 | yes p2 | no p3 | yes p4 | svar2 p5 p6 = ⊥-elim $ p3 $
+    begin c' ≤⟨ p ⟩ c ≤⟨ ≤-subR' d p5 ⟩ n ∸ d ∎
+  r | yes p1 | yes p2 | _ | no p4 | _ = ⊥-elim $ p4 $ ≤-addR d' p1
+  r | yes p1 | no p2 = ⊥-elim $ p2 $ begin c' ≤⟨ p ⟩ c ≤⟨ p1 ⟩ n ∎
+  r | no p1 | yes p2 with c' ≤? n | (c + d') ≤? (n + d')
+  r | no p1 | yes p2 | yes _ | yes p3 = ⊥-elim $ p1 $ ≤-subR d' p3
+  r | no p1 | yes p2 | yes _ | no p3 = refl
+  r | no p1 | yes p2 | no p3 | _ = ⊥-elim $ p3 p2
+  r | no p1 | no p2 with c' ≤? n | (c + d') ≤? n
+  r | no p1 | no p2 | _ | yes p4 =
+    ⊥-elim $ p1 $ begin c ≤⟨ m≤m+n c d' ⟩ c + d' ≤⟨ p4 ⟩ n ∎
+  r | no p1 | no p2 | yes p3 | no p4 = ⊥-elim $ p2 p3
+  r | no p1 | no p2 | no p3 | no p4 = refl
+unshiftShiftSwap p (sapp s1 s2) =
+  cong₂ tapp (unshiftShiftSwap p s1) (unshiftShiftSwap p s2)
+unshiftShiftSwap p (sabs s1) = cong tabs (unshiftShiftSwap (s≤s p) s1)
