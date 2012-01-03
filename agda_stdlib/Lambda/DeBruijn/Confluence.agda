@@ -34,13 +34,13 @@ parRefl {tvar _} = →βPvar
 parRefl {tapp _ _} = →βPapp parRefl parRefl
 parRefl {tabs _} = →βPabs parRefl
 
-→β⊂→βP : ∀ {t t'} → t →β t' → t →βP t'
+→β⊂→βP : _→β_ ⇒ _→βP_
 →β⊂→βP →βbeta = →βPbeta parRefl parRefl
 →β⊂→βP (→βappl r) = →βPapp (→β⊂→βP r) parRefl
 →β⊂→βP (→βappr r) = →βPapp parRefl (→β⊂→βP r)
 →β⊂→βP (→βabs r) = →βPabs (→β⊂→βP r)
 
-→βP⊂→β* : ∀ {t t'} → t →βP t' → t →β* t'
+→βP⊂→β* : _→βP_ ⇒ _→β*_
 →βP⊂→β* →βPvar = rtc0
 →βP⊂→β* (→βPapp r1 r2) = rtcTrans (→β*appl (→βP⊂→β* r1)) (→β*appr (→βP⊂→β* r2))
 →βP⊂→β* (→βPabs r) = →β*abs (→βP⊂→β* r)
@@ -166,5 +166,40 @@ starLemma {tapp (tabs t1) t2} (→βPbeta {.t1} {t1'} {.t2} {t2'} p1 p2) =
     (substLemma (starLemma p1) (shiftLemma (starLemma p2)))
     (betaShifted 0 t1' t2')
 
-diamondProp→βP : ∀ {t1 t2 t3} → t1 →βP t2 → t1 →βP t3 → ∃ (λ t → t2 →βP t × t3 →βP t)
-diamondProp→βP {t1} r1 r2 = (t1 *) , (starLemma r1 , starLemma r2)
+rtclosureTrans : ∀ {ℓ} {A : Set ℓ} {R : Rel A ℓ} → Transitive (rtclosure R)
+rtclosureTrans rtc0 r2 = r2
+rtclosureTrans (rtcs r1 r2) r3 = rtcs r1 (rtclosureTrans r2 r3)
+
+Diamond : ∀ {ℓ} {A : Set ℓ} (_R_ : Rel A ℓ) → Set ℓ
+Diamond _R_ = ∀ {t1 t2 t3} → t1 R t2 → t1 R t3 → ∃ (λ t → t2 R t × t3 R t)
+
+SemiConfluence : ∀ {ℓ} {A : Set ℓ} (_R_ : Rel A ℓ) → Set ℓ
+SemiConfluence _R_ =
+  ∀ {t1 t2 t3} → t1 R t2 → rtclosure _R_ t1 t3 →
+  ∃ (λ t → rtclosure _R_ t2 t × rtclosure _R_ t3 t)
+
+Confluence : ∀ {ℓ} {A : Set ℓ} (_R_ : Rel A ℓ) → Set ℓ
+Confluence _R_ = Diamond (rtclosure _R_)
+
+Diamond⇒SemiConfluence : ∀ {ℓ} {A : Set ℓ} {R : Rel A ℓ} → Diamond R → SemiConfluence R
+Diamond⇒SemiConfluence diamond {t1} {t2} {.t1} r1 rtc0 = t2 , rtc0 , rtcs r1 rtc0
+Diamond⇒SemiConfluence diamond {t1} {t2} {t3} r1 (rtcs {b = t4} r2 r3) =
+  proj₁ d' , rtcs (proj₁ (proj₂ d)) (proj₁ (proj₂ d')) , proj₂ (proj₂ d') where
+  d = diamond r1 r2
+  d' = Diamond⇒SemiConfluence diamond (proj₂ (proj₂ d)) r3
+
+SemiConfluence⇒Confluence :
+  ∀ {ℓ} {A : Set ℓ} {R : Rel A ℓ} → SemiConfluence R → Confluence R
+SemiConfluence⇒Confluence sconfluence {t1} {.t1} {t3} rtc0 r2 = t3 , r2 , rtc0
+SemiConfluence⇒Confluence sconfluence {t1} {t2} {t3} (rtcs {b = t4} r1 r2) r3 =
+  proj₁ sc' , proj₁ (proj₂ sc') , rtclosureTrans (proj₂ (proj₂ sc)) (proj₂ (proj₂ sc'))
+  where
+  sc = sconfluence r1 r3
+  sc' = SemiConfluence⇒Confluence sconfluence r2 (proj₁ (proj₂ sc))
+
+diamond→βP : Diamond _→βP_
+diamond→βP {t1} r1 r2 = (t1 *) , starLemma r1 , starLemma r2
+
+confluence→βP : Confluence _→βP_
+confluence→βP = SemiConfluence⇒Confluence $ Diamond⇒SemiConfluence diamond→βP
+

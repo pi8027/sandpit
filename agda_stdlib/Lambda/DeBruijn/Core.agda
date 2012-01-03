@@ -3,6 +3,7 @@ module Lambda.DeBruijn.Core where
 
 import Level
 open import Function
+open import Data.Product
 open import Data.Nat
 open import Relation.Nullary
 open import Relation.Binary
@@ -67,3 +68,4 @@ tvar n * = tvar n
 tapp (tabs t1) t2 * = unshift 1 0 (t1 * [ 0 ≔ shift 1 0 (t2 *) ])
 tapp t1 t2 * = tapp (t1 *) (t2 *)
 tabs t * = tabs (t *)
+
