@@ -556,3 +556,4 @@ unshiftShiftSwap {d} {c} {d'} {c'} {tvar n} p s1 = r where
 unshiftShiftSwap p (sapp s1 s2) =
   cong₂ tapp (unshiftShiftSwap p s1) (unshiftShiftSwap p s2)
 unshiftShiftSwap p (sabs s1) = cong tabs (unshiftShiftSwap (s≤s p) s1)
+

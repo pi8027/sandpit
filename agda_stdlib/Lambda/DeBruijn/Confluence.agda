@@ -63,6 +63,40 @@ shiftConservation→β* (rtcs p1 p2) s = shiftConservation→β* p2 (shiftConser
 shiftConservation→βP : ∀ {d c t1 t2} → t1 →βP t2 → Shifted d c t1 → Shifted d c t2
 shiftConservation→βP p s = shiftConservation→β* (→βP⊂→β* p) s
 
+unshiftSubstSwap2 :
+  ∀ {d c n t1 t2} → n < c → Shifted d c t1 → Shifted d c t2 →
+  unshift d c (t1 [ n ≔ t2 ]) ≡ unshift d c t1 [ n ≔ unshift d c t2 ]
+unshiftSubstSwap2 {d} {c} {n} {tvar n'} {t2} p s1 s2 = r where
+  open ≤-Reasoning
+  r : unshift d c (tvar n' [ n ≔ t2 ]) ≡ unshift d c (tvar n') [ n ≔ unshift d c t2 ]
+  r with n ≟ n' | c ≤? n'
+  r | yes p1 | yes p2 = ⊥-elim $ 1+n≰n $
+    begin suc n ≤⟨ p ⟩ c ≤⟨ p2 ⟩ n' ≡⟨ sym p1 ⟩ n ∎
+  r | yes p1 | no p2 with n ≟ n'
+  r | yes p1 | no p2 | yes p3 = refl
+  r | yes p1 | no p2 | no p3 = ⊥-elim $ p3 p1
+  r | no p1 | yes p2 with c ≤? n' | n ≟ n' ∸ d
+  r | no p1 | yes p2 | yes p3 | yes p4 with s1
+  r | no p1 | yes p2 | yes p3 | yes p4 | svar1 p5 =
+    ⊥-elim $ 1+n≰n $ begin suc n' ≤⟨ p5 ⟩ c ≤⟨ p3 ⟩ n' ∎
+  r | no p1 | yes p2 | yes p3 | yes p4 | svar2 p5 p6 = ⊥-elim $ 1+n≰n $ begin
+    suc n' ≡⟨ cong suc $ sym $ ≡-addL' p6 p4 ⟩
+    suc d + n ≡⟨ cong suc (+-comm d n) ⟩
+    suc n + d ≤⟨ ≤-addR d p ⟩
+    c + d ≤⟨ p5 ⟩
+    n' ∎
+  r | no p1 | yes p2 | yes p3 | no p4 = refl
+  r | no p1 | yes p2 | no p3 | _ = ⊥-elim $ p3 p2
+  r | no p1 | no p2 with c ≤? n' | n ≟ n'
+  r | no p1 | no p2 | yes p3 | _ = ⊥-elim $ p2 p3
+  r | no p1 | no p2 | _ | yes p4 = ⊥-elim $ p1 p4
+  r | no p1 | no p2 | no p3 | no p4 = refl
+unshiftSubstSwap2 p (sapp s1 s2) s3 =
+  cong₂ tapp (unshiftSubstSwap2 p s1 s3) (unshiftSubstSwap2 p s2 s3)
+unshiftSubstSwap2 {d} {c} {n} {tabs t1} {t2} p (sabs s1) s2
+  rewrite unshiftShiftSwap {d} {c} {1} {0} z≤n s2 | +-comm c 1 =
+    cong tabs $ unshiftSubstSwap2 (s≤s p) s1 $ shiftShifted' z≤n s2
+
 shiftLemma : ∀ {t t' d c} → t →βP t' → shift d c t →βP shift d c t'
 shiftLemma →βPvar = parRefl
 shiftLemma (→βPapp r1 r2) = →βPapp (shiftLemma r1) (shiftLemma r2)
@@ -113,7 +147,7 @@ unshiftLemma {d = d} {c} (→βPbeta {t1} {t1'} {t2} {t2'} r1 r2) (sapp (sabs s1
         unshift d (c + 1) (t1' [ 0 ≔ shift 1 0 t2' ])
           ≡⟨ cong (λ c → unshift d c (t1' [ 0 ≔ shift 1 0 t2' ])) (+-comm c 1) ⟩
         unshift d (suc c) (t1' [ 0 ≔ shift 1 0 t2' ])
-          ≡⟨ {!!} ⟩
+          ≡⟨ unshiftSubstSwap2 (s≤s z≤n) s1' (shiftShifted' z≤n s2') ⟩
         unshift d (suc c) t1' [ 0 ≔ unshift d (suc c) (shift 1 0 t2') ]
           ≡⟨ cong (λ t → unshift d (suc c) t1' [ 0 ≔ t ]) $ begin
             unshift d (suc c) (shift 1 0 t2')
