@@ -166,10 +166,6 @@ starLemma {tapp (tabs t1) t2} (→βPbeta {.t1} {t1'} {.t2} {t2'} p1 p2) =
     (substLemma (starLemma p1) (shiftLemma (starLemma p2)))
     (betaShifted 0 t1' t2')
 
-rtclosureTrans : ∀ {ℓ} {A : Set ℓ} {R : Rel A ℓ} → Transitive (rtclosure R)
-rtclosureTrans rtc0 r2 = r2
-rtclosureTrans (rtcs r1 r2) r3 = rtcs r1 (rtclosureTrans r2 r3)
-
 Diamond : ∀ {ℓ} {A : Set ℓ} (_R_ : Rel A ℓ) → Set ℓ
 Diamond _R_ = ∀ {t1 t2 t3} → t1 R t2 → t1 R t3 → ∃ (λ t → t2 R t × t3 R t)
 
@@ -192,8 +188,7 @@ SemiConfluence⇒Confluence :
   ∀ {ℓ} {A : Set ℓ} {R : Rel A ℓ} → SemiConfluence R → Confluence R
 SemiConfluence⇒Confluence sconfluence {t1} {.t1} {t3} rtc0 r2 = t3 , r2 , rtc0
 SemiConfluence⇒Confluence sconfluence {t1} {t2} {t3} (rtcs {b = t4} r1 r2) r3 =
-  proj₁ sc' , proj₁ (proj₂ sc') , rtclosureTrans (proj₂ (proj₂ sc)) (proj₂ (proj₂ sc'))
-  where
+  proj₁ sc' , proj₁ (proj₂ sc') , rtclosureTrans (proj₂ (proj₂ sc)) (proj₂ (proj₂ sc')) where
   sc = sconfluence r1 r3
   sc' = SemiConfluence⇒Confluence sconfluence r2 (proj₁ (proj₂ sc))
 
@@ -202,4 +197,11 @@ diamond→βP {t1} r1 r2 = (t1 *) , starLemma r1 , starLemma r2
 
 confluence→βP : Confluence _→βP_
 confluence→βP = SemiConfluence⇒Confluence $ Diamond⇒SemiConfluence diamond→βP
+
+confluence→β : Confluence _→β_
+confluence→β r1 r2 =
+  proj₁ c ,
+  rtclosureConcat (rtclosureMap →βP⊂→β* (proj₁ (proj₂ c))) ,
+  rtclosureConcat (rtclosureMap →βP⊂→β* (proj₂ (proj₂ c))) where
+  c = confluence→βP (rtclosureMap →β⊂→βP r1) (rtclosureMap →β⊂→βP r2)
 
