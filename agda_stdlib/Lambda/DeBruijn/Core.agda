@@ -50,24 +50,6 @@ data _→β_ : Rel Term Level.zero where
   →βappr : ∀ {t1 t2 t2'} → t2 →β t2' → tapp t1 t2 →β tapp t1 t2'
   →βabs  : ∀ {t t'} → t →β t' → tabs t →β tabs t'
 
-{-
-data rtclosure {ℓ} {A : Set ℓ} (rel : Rel A ℓ) : Rel A ℓ where
-  rtc0 : ∀ {a} → rtclosure rel a a
-  rtcs : ∀ {a b c} → rel a b → rtclosure rel b c → rtclosure rel a c
-
-rtclosureTrans : ∀ {ℓ} {A : Set ℓ} {R : Rel A ℓ} → Transitive (rtclosure R)
-rtclosureTrans rtc0 r2 = r2
-rtclosureTrans (rtcs r1 r2) r3 = rtcs r1 (rtclosureTrans r2 r3)
-
-rtclosureMap : ∀ {ℓ} {A : Set ℓ} {R Q : Rel A ℓ} → R ⇒ Q → rtclosure R ⇒ rtclosure Q
-rtclosureMap f rtc0 = rtc0
-rtclosureMap f (rtcs r1 r2) = rtcs (f r1) (rtclosureMap f r2)
-
-rtclosureConcat : ∀ {ℓ} {A : Set ℓ} {R : Rel A ℓ} → rtclosure (rtclosure R) ⇒ rtclosure R
-rtclosureConcat rtc0 = rtc0
-rtclosureConcat (rtcs r1 r2) = rtclosureTrans r1 (rtclosureConcat r2)
--}
-
 _→β*_ : Rel Term Level.zero
 _→β*_ = Star _→β_
 
