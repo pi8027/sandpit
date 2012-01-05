@@ -5,6 +5,7 @@ open import Function
 open import Data.Product
 open import Data.Nat
 open import Data.Nat.Properties
+open import Data.Star
 open import Relation.Nullary
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
@@ -12,22 +13,17 @@ open import Relation.Binary.PropositionalEquality
 open import Lambda.DeBruijn.Core
 open import Lambda.DeBruijn.Properties
 
-rtcTrans : ∀ {ℓ} {A : Set ℓ} {rel : Rel A ℓ} {a b c : A} →
-           rtclosure rel a b → rtclosure rel b c → rtclosure rel a c
-rtcTrans rtc0 r2 = r2
-rtcTrans (rtcs r1 r2) r3 = rtcs r1 (rtcTrans r2 r3)
-
 →β*appl : ∀ {t1 t1' t2} → t1 →β* t1' → tapp t1 t2 →β* tapp t1' t2
-→β*appl rtc0 = rtc0
-→β*appl (rtcs r1 r2) = rtcs (→βappl r1) (→β*appl r2)
+→β*appl ε = ε
+→β*appl (r1 ◅ r2) = →βappl r1 ◅ →β*appl r2
 
 →β*appr : ∀ {t1 t2 t2'} → t2 →β* t2' → tapp t1 t2 →β* tapp t1 t2'
-→β*appr rtc0 = rtc0
-→β*appr (rtcs r1 r2) = rtcs (→βappr r1) (→β*appr r2)
+→β*appr ε = ε
+→β*appr (r1 ◅ r2) = →βappr r1 ◅ →β*appr r2
 
 →β*abs : ∀ {t t'} → t →β* t' → tabs t →β* tabs t'
-→β*abs rtc0 = rtc0
-→β*abs (rtcs r1 r2) = rtcs (→βabs r1) (→β*abs r2)
+→β*abs ε = ε
+→β*abs (r1 ◅ r2) = →βabs r1 ◅ →β*abs r2
 
 parRefl : ∀ {t} → t →βP t
 parRefl {tvar _} = →βPvar
@@ -41,13 +37,10 @@ parRefl {tabs _} = →βPabs parRefl
 →β⊂→βP (→βabs r) = →βPabs (→β⊂→βP r)
 
 →βP⊂→β* : _→βP_ ⇒ _→β*_
-→βP⊂→β* →βPvar = rtc0
-→βP⊂→β* (→βPapp r1 r2) = rtcTrans (→β*appl (→βP⊂→β* r1)) (→β*appr (→βP⊂→β* r2))
+→βP⊂→β* →βPvar = ε
+→βP⊂→β* (→βPapp r1 r2) = →β*appl (→βP⊂→β* r1) ◅◅ →β*appr (→βP⊂→β* r2)
 →βP⊂→β* (→βPabs r) = →β*abs (→βP⊂→β* r)
-→βP⊂→β* (→βPbeta r1 r2) =
-  rtcTrans
-    (→β*appl (→β*abs (→βP⊂→β* r1)))
-    (rtcTrans (→β*appr (→βP⊂→β* r2)) (rtcs →βbeta rtc0))
+→βP⊂→β* (→βPbeta r1 r2) = →β*appl (→β*abs (→βP⊂→β* r1)) ◅◅ →β*appr (→βP⊂→β* r2) ◅◅ →βbeta ◅ ε
 
 shiftConservation→β : ∀ {d c t1 t2} → t1 →β t2 → Shifted d c t1 → Shifted d c t2
 shiftConservation→β {d} {c} {tapp (tabs t1) t2} →βbeta (sapp (sabs s1) s2) =
@@ -57,8 +50,8 @@ shiftConservation→β (→βappr p) (sapp s1 s2) = sapp s1 (shiftConservation�
 shiftConservation→β (→βabs p) (sabs s1) = sabs (shiftConservation→β p s1)
 
 shiftConservation→β* : ∀ {d c t1 t2} → t1 →β* t2 → Shifted d c t1 → Shifted d c t2
-shiftConservation→β* rtc0 s = s
-shiftConservation→β* (rtcs p1 p2) s = shiftConservation→β* p2 (shiftConservation→β p1 s)
+shiftConservation→β* ε s = s
+shiftConservation→β* (p1 ◅ p2) s = shiftConservation→β* p2 (shiftConservation→β p1 s)
 
 shiftConservation→βP : ∀ {d c t1 t2} → t1 →βP t2 → Shifted d c t1 → Shifted d c t2
 shiftConservation→βP p s = shiftConservation→β* (→βP⊂→β* p) s
@@ -171,24 +164,24 @@ Diamond _R_ = ∀ {t1 t2 t3} → t1 R t2 → t1 R t3 → ∃ (λ t → t2 R t ×
 
 SemiConfluence : ∀ {ℓ} {A : Set ℓ} (_R_ : Rel A ℓ) → Set ℓ
 SemiConfluence _R_ =
-  ∀ {t1 t2 t3} → t1 R t2 → rtclosure _R_ t1 t3 →
-  ∃ (λ t → rtclosure _R_ t2 t × rtclosure _R_ t3 t)
+  ∀ {t1 t2 t3} → t1 R t2 → Star _R_ t1 t3 →
+  ∃ (λ t → Star _R_ t2 t × Star _R_ t3 t)
 
 Confluence : ∀ {ℓ} {A : Set ℓ} (_R_ : Rel A ℓ) → Set ℓ
-Confluence _R_ = Diamond (rtclosure _R_)
+Confluence _R_ = Diamond (Star _R_)
 
 Diamond⇒SemiConfluence : ∀ {ℓ} {A : Set ℓ} {R : Rel A ℓ} → Diamond R → SemiConfluence R
-Diamond⇒SemiConfluence diamond {t1} {t2} {.t1} r1 rtc0 = t2 , rtc0 , rtcs r1 rtc0
-Diamond⇒SemiConfluence diamond {t1} {t2} {t3} r1 (rtcs {b = t4} r2 r3) =
-  proj₁ d' , rtcs (proj₁ (proj₂ d)) (proj₁ (proj₂ d')) , proj₂ (proj₂ d') where
+Diamond⇒SemiConfluence diamond {t1} {t2} {.t1} r1 ε = t2 , ε , r1 ◅ ε
+Diamond⇒SemiConfluence diamond {t1} {t2} {t3} r1 (r2 ◅ r3) =
+  proj₁ d' , proj₁ (proj₂ d) ◅ proj₁ (proj₂ d') , proj₂ (proj₂ d') where
   d = diamond r1 r2
   d' = Diamond⇒SemiConfluence diamond (proj₂ (proj₂ d)) r3
 
 SemiConfluence⇒Confluence :
   ∀ {ℓ} {A : Set ℓ} {R : Rel A ℓ} → SemiConfluence R → Confluence R
-SemiConfluence⇒Confluence sconfluence {t1} {.t1} {t3} rtc0 r2 = t3 , r2 , rtc0
-SemiConfluence⇒Confluence sconfluence {t1} {t2} {t3} (rtcs {b = t4} r1 r2) r3 =
-  proj₁ sc' , proj₁ (proj₂ sc') , rtclosureTrans (proj₂ (proj₂ sc)) (proj₂ (proj₂ sc')) where
+SemiConfluence⇒Confluence sconfluence {t1} {.t1} {t3} ε r2 = t3 , r2 , ε
+SemiConfluence⇒Confluence sconfluence {t1} {t2} {t3} (r1 ◅ r2) r3 =
+  proj₁ sc' , proj₁ (proj₂ sc') , proj₂ (proj₂ sc) ◅◅ proj₂ (proj₂ sc') where
   sc = sconfluence r1 r3
   sc' = SemiConfluence⇒Confluence sconfluence r2 (proj₁ (proj₂ sc))
 
@@ -201,7 +194,7 @@ confluence→βP = SemiConfluence⇒Confluence $ Diamond⇒SemiConfluence diamon
 confluence→β : Confluence _→β_
 confluence→β r1 r2 =
   proj₁ c ,
-  rtclosureConcat (rtclosureMap →βP⊂→β* (proj₁ (proj₂ c))) ,
-  rtclosureConcat (rtclosureMap →βP⊂→β* (proj₂ (proj₂ c))) where
-  c = confluence→βP (rtclosureMap →β⊂→βP r1) (rtclosureMap →β⊂→βP r2)
+  Data.Star.concat (Data.Star.map →βP⊂→β* (proj₁ (proj₂ c))) ,
+  Data.Star.concat (Data.Star.map →βP⊂→β* (proj₂ (proj₂ c))) where
+  c = confluence→βP (Data.Star.map →β⊂→βP r1) (Data.Star.map →β⊂→βP r2)
 
