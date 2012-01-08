@@ -16,11 +16,6 @@ data Term : Set where
   tapp : Term → Term → Term
   tabs : Term → Term
 
-data Term' : ℕ → Term → Set where
-  tvar' : ∀ {n k} → k < n → Term' n (tvar k)
-  tapp' : ∀ {n t1 t2} → Term' n t1 → Term' n t2 → Term' n (tapp t1 t2)
-  tabs' : ∀ {n t} → Term' (suc n) t → Term' n (tabs t)
-
 shift : ℕ → ℕ → Term → Term
 shift d c (tvar n) with c ≤? n
 ...| yes p = tvar (n + d)
