@@ -29,7 +29,7 @@ Section List.
     induction l.
     auto.
     simpl.
-    apply (f_equal (cons a)).
+    f_equal.
     auto.
   Qed.
 
@@ -37,18 +37,18 @@ Section List.
     induction l1.
     auto.
     simpl.
-    apply (f_equal (cons a)).
+    f_equal.
     auto.
   Qed.
 
-  Lemma app_rev_comm (l1 l2 : list) : rev (l1 ++ l2) = rev l2 ++ rev l1.
+  Lemma app_rev (l1 l2 : list) : rev (l1 ++ l2) = rev l2 ++ rev l1.
     induction l1.
     simpl.
     rewrite (append_id_right (rev l2)).
     auto.
     simpl.
     rewrite (append_comm (rev l2) (rev l1) (cons a nil)).
-    apply (f_equal (fun l => l ++ cons a nil)).
+    f_equal.
     auto.
   Qed.
 
@@ -56,9 +56,9 @@ Section List.
     induction l.
     auto.
     simpl.
-    rewrite (app_rev_comm (rev l) (cons a nil)).
+    rewrite (app_rev (rev l) (cons a nil)).
     simpl.
-    apply (f_equal (cons a)).
+    f_equal.
     auto.
   Qed.
 
