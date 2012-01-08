@@ -42,14 +42,14 @@ parRefl {tabs _} = →βPabs parRefl
 →βP⊂→β* (→βPabs r) = →β*abs (→βP⊂→β* r)
 →βP⊂→β* (→βPbeta r1 r2) = →β*appl (→β*abs (→βP⊂→β* r1)) ◅◅ →β*appr (→βP⊂→β* r2) ◅◅ →βbeta ◅ ε
 
-shiftConservation→β : ∀ {d c t1 t2} → t1 →β t2 → Shifted d c t1 → Shifted d c t2
+shiftConservation→β : ∀ {d c} → _→β_ ⇒ ((λ a b → a → b) on Shifted d c)
 shiftConservation→β {d} {c} {tapp (tabs t1) t2} →βbeta (sapp (sabs s1) s2) =
   betaShifted2 s1 s2
 shiftConservation→β (→βappl p) (sapp s1 s2) = sapp (shiftConservation→β p s1) s2
 shiftConservation→β (→βappr p) (sapp s1 s2) = sapp s1 (shiftConservation→β p s2)
 shiftConservation→β (→βabs p) (sabs s1) = sabs (shiftConservation→β p s1)
 
-shiftConservation→β* : ∀ {d c t1 t2} → t1 →β* t2 → Shifted d c t1 → Shifted d c t2
+shiftConservation→β* : ∀ {d c} → _→β*_ ⇒ ((λ a b → a → b) on Shifted d c)
 shiftConservation→β* ε s = s
 shiftConservation→β* (p1 ◅ p2) s = shiftConservation→β* p2 (shiftConservation→β p1 s)
 

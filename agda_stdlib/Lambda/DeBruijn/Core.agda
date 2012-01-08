@@ -3,11 +3,13 @@ module Lambda.DeBruijn.Core where
 
 import Level
 open import Function
+open import Data.Empty
 open import Data.Product
 open import Data.Nat
 open import Data.Star
 open import Relation.Nullary
 open import Relation.Binary
+open import Relation.Binary.Core
 
 data Term : Set where
   tvar : ℕ → Term
