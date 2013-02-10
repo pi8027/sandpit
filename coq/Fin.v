@@ -138,9 +138,7 @@ Lemma fin_plus_comm :
 Proof.
   move=> n m a b; apply eqmap_nat_fin; first ssromega.
   rewrite -!fin_plus_is_plus.
-  move: n a; apply fin_rect=> n.
-  - simpl; ssromega.
-  - move=> a IHa //=; ssromega.
+  move: n a; apply fin_rect=> n //= a IH; ssromega.
 Qed.
 
 Fixpoint enumerate_fin n : seq (fin n) :=
