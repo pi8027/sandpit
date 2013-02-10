@@ -30,7 +30,7 @@ Definition fin_case :
   (forall n, P n.+1 (inl ())) -> (forall n (p : fin n), P n.+1 (inr p)) ->
   forall n p, P n p.
 Proof.
-  by move=> P H0 H1; case; last move=> n; simpl; case; first case.
+  by move=> P H0 H1; case; last move=> n //=; case; first case.
 Defined.
 
 Definition fin_rectS :
@@ -51,7 +51,7 @@ Definition fin_rect :
   forall n p, P n p.
 Proof.
   move=> P H0 H1; elim; first case.
-  move=> n IH; simpl; elim; first case; auto.
+  move=> n IH //=; elim; first case; auto.
 Defined.
 
 Definition fin2nat (n : nat) (a : fin n) : nat :=
@@ -78,14 +78,14 @@ Lemma fin2nat_inv :
 Proof.
   apply fin_rectS.
   - done.
-  - move=> n p H; simpl; f_equal; apply H.
+  - move=> n p H //=; f_equal; apply H.
 Qed.
 
 Definition fin_shift n m (a : fin n) : fin (n + m).
 Proof.
-  move: n a; apply fin_rect=> n.
-  - by simpl; apply inl.
-  - by simpl=> _ r; apply inr.
+  move: n a; apply fin_rect=> n //=.
+  - by apply inl.
+  - by move=> _ r; apply inr.
 Defined.
 
 Definition fin_plus n m (a : fin n) (b : fin m) : fin (n + m).-1.
@@ -123,17 +123,13 @@ Lemma eqmap_nat_fin :
   n = m -> fin2nat n a = fin2nat m b -> a ~= b.
 Proof.
   move=> n m a; move: n a m.
-  apply (fin_rect (fun n a =>
-    forall m b, n = m -> fin2nat n a = fin2nat m b -> a ~= b))=> n.
-  - apply (fin_case (fun m b =>
-      n.+1 = m -> fin2nat n.+1 (inl ()) = fin2nat m b -> inl () ~= b))=> m; simpl.
+  refine (fin_rect _ _ _)=> n.
+  - refine (fin_case _ _ _)=> m; simpl.
     - by case => H _; rewrite H.
     - move=> b _ H; inversion H.
-  - move=> a IHa.
-    apply (fin_case (fun m b =>
-      n.+1 = m -> fin2nat n.+1 (inr a) = fin2nat m b -> inr a ~= b))=> m.
-    - simpl=> _ H; inversion H.
-    - simpl=> b; case=> H; case=> H0.
+  - move=> a IHa; refine (fin_case _ _ _)=> m; simpl.
+    - move=> _ H; inversion H.
+    - move=> b; case=> H; case=> H0.
       by rewrite (IHa _ _ H H0).
 Qed.
 
@@ -144,8 +140,7 @@ Proof.
   rewrite -!fin_plus_is_plus.
   move: n a; apply fin_rect=> n.
   - simpl; ssromega.
-  - move=> a IHa.
-    simpl; ssromega.
+  - move=> a IHa //=; ssromega.
 Qed.
 
 Fixpoint enumerate_fin n : seq (fin n) :=
