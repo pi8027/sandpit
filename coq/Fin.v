@@ -66,19 +66,14 @@ Proof.
     - move=> m; apply inr, IHn.
 Defined.
 
-Lemma fin2nat_range : forall n (a : fin n), lt (fin2nat n a) n.
+Lemma fin2nat_range : forall n a, lt (fin2nat n a) n.
 Proof.
-  apply fin_rect; simpl.
-  - move=> n; ssromega.
-  - move=> n p IH; ssromega.
+  apply fin_rect => //= [n | n p IH]; ssromega.
 Qed.
 
-Lemma fin2nat_inv :
-  forall n (a : fin n.+1), a = nat2fin (fin2nat n.+1 a) n.
+Lemma fin2nat_inv : forall n a, a = nat2fin (fin2nat n.+1 a) n.
 Proof.
-  apply fin_rectS.
-  - done.
-  - move=> n p H //=; f_equal; apply H.
+  by apply fin_rectS=> //= n p H; f_equal.
 Qed.
 
 Definition fin_shift n m (a : fin n) : fin (n + m).
@@ -98,15 +93,12 @@ Proof.
 Defined.
 
 Lemma fin_shift_ident :
-  forall n m (a : fin n), fin2nat n a = fin2nat (n + m) (fin_shift n m a).
+  forall n m a, fin2nat n a = fin2nat (n + m) (fin_shift n m a).
 Proof.
-  move=> n m; move: n; apply fin_rect=> n; simpl.
-  - done.
-  - move=> a IHa; f_equal; apply IHa.
+  move=> n m; move: n; apply fin_rect=> //= n a IHa; f_equal; apply IHa.
 Qed.
 
-Lemma fin_plus_is_plus :
-  forall n m (a : fin n) (b : fin m),
+Lemma fin_plus_is_plus : forall n m a b,
   fin2nat n a + fin2nat m b = fin2nat (n + m).-1 (fin_plus n m a b).
 Proof.
   move=> n m a b; move: n a; apply fin_rect=> n.
@@ -115,15 +107,13 @@ Proof.
     apply fin_shift_ident.
   - rewrite {2}(lock fin_plus) //= -/addn; unlock.
     case: n; first case.
-    by move=> n; rewrite /addn //= => p H; f_equal.
+    by move=> n; rewrite /addn => //= p H; f_equal.
 Qed.
 
 Lemma eqmap_nat_fin :
-  forall n m (a : fin n) (b : fin m),
-  n = m -> fin2nat n a = fin2nat m b -> a ~= b.
+  forall n m a b, n = m -> fin2nat n a = fin2nat m b -> a ~= b.
 Proof.
-  move=> n m a; move: n a m.
-  refine (fin_rect _ _ _)=> n.
+  move=> n m a; move: n a m; refine (fin_rect _ _ _)=> n.
   - refine (fin_case _ _ _)=> m; simpl.
     - by case => H _; rewrite H.
     - move=> b _ H; inversion H.
@@ -133,8 +123,7 @@ Proof.
       by rewrite (IHa _ _ H H0).
 Qed.
 
-Lemma fin_plus_comm :
-  forall n m (a : fin n) (b : fin m), fin_plus n m a b ~= fin_plus m n b a.
+Lemma fin_plus_comm : forall n m a b, fin_plus n m a b ~= fin_plus m n b a.
 Proof.
   move=> n m a b; apply eqmap_nat_fin; first ssromega.
   rewrite -!fin_plus_is_plus; move: n a; apply fin_rect=> //= n a; ssromega.
@@ -147,11 +136,10 @@ Fixpoint enumerate_fin n : seq (fin n) :=
 
 Goal forall n v, foldr (fun v' p => v = v' \/ p) False (enumerate_fin n).
 Proof.
-  apply fin_rect; simpl.
+  apply fin_rect=> //= n.
   - by left.
-  - move=> n v' IH; right; move: IH; elim (enumerate_fin n); simpl.
-    - done.
-    - move=> v vs IH; case.
-      - by left; f_equal.
-      - auto.
+  - move=> v' IH; right; move: IH.
+    elim (enumerate_fin n)=> //= v vs IH; case.
+    - by left; f_equal.
+    - auto.
 Qed.
