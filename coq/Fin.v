@@ -114,13 +114,9 @@ Lemma eqmap_nat_fin :
   forall n m a b, n = m -> fin2nat n a = fin2nat m b -> a ~= b.
 Proof.
   move=> n m a; move: n a m; refine (fin_rect _ _ _)=> n.
-  - refine (fin_case _ _ _)=> m; simpl.
-    - by case => H _; rewrite H.
-    - move=> b _ H; inversion H.
-  - move=> a IHa; refine (fin_case _ _ _)=> m; simpl.
-    - move=> _ H; inversion H.
-    - move=> b; case=> H; case=> H0.
-      by rewrite (IHa _ _ H H0).
+  - by refine (fin_case _ _ _)=> //= m; case=> H _; rewrite H.
+  - move=> a IHa; refine (fin_case _ _ _)=> m //= b.
+    by case=> H; case=> H0; rewrite (IHa _ _ H H0).
 Qed.
 
 Lemma fin_plus_comm : forall n m a b, fin_plus n m a b ~= fin_plus m n b a.
