@@ -137,8 +137,7 @@ Lemma fin_plus_comm :
   forall n m (a : fin n) (b : fin m), fin_plus n m a b ~= fin_plus m n b a.
 Proof.
   move=> n m a b; apply eqmap_nat_fin; first ssromega.
-  rewrite -!fin_plus_is_plus.
-  move: n a; apply fin_rect=> n //= a IH; ssromega.
+  rewrite -!fin_plus_is_plus; move: n a; apply fin_rect=> //= n a; ssromega.
 Qed.
 
 Fixpoint enumerate_fin n : seq (fin n) :=
