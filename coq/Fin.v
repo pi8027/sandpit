@@ -5,18 +5,18 @@ Set Implicit Arguments.
 
 Ltac ssromega := rewrite ?NatTrec.trecE -?plusE -?minusE -?multE; omega.
 
-Fixpoint fin (n : nat) : Set :=
-  (if n is n.+1 then ()+fin n else Empty_set)%type.
+Fixpoint t (n : nat) : Set :=
+  (if n is n.+1 then ()+t n else Empty_set)%type.
 
-Definition fin_case0 : forall (P : fin 0 -> Type) p, P p.
+Definition rect_case0 : forall (P : t 0 -> Type) p, P p.
 Proof.
   move=> P; case.
 Defined.
 
-Definition fin_caseS :
-  forall P : forall n, fin n.+1 -> Type,
-  (forall n, P n (inl ())) -> (forall n (p : fin n), P n (inr p)) ->
-  forall n (p : fin n.+1), P n p.
+Definition rect_caseS :
+  forall P : forall n, t n.+1 -> Type,
+  (forall n, P n (inl ())) -> (forall n (p : t n), P n (inr p)) ->
+  forall n (p : t n.+1), P n p.
 Proof.
   move=> P H0 H1; case; simpl.
   - case; case; apply H0.
@@ -25,16 +25,16 @@ Proof.
     - move=> p; apply H1.
 Defined.
 
-Definition fin_case :
-  forall P : forall n : nat, fin n -> Type,
-  (forall n, P n.+1 (inl ())) -> (forall n (p : fin n), P n.+1 (inr p)) ->
+Definition rect_case :
+  forall P : forall n : nat, t n -> Type,
+  (forall n, P n.+1 (inl ())) -> (forall n (p : t n), P n.+1 (inr p)) ->
   forall n p, P n p.
 Proof.
   by move=> P H0 H1; case; last move=> n //=; case; first case.
 Defined.
 
-Definition fin_rectS :
-  forall P : forall n : nat, fin n.+1 -> Type,
+Definition rectS :
+  forall P : forall n : nat, t n.+1 -> Type,
   (forall n, P n (inl ())) -> (forall n p, P n p -> P n.+1 (inr p)) ->
   forall n p, P n p.
 Proof.
@@ -45,8 +45,8 @@ Proof.
     - by move=> p; apply H1.
 Defined.
 
-Definition fin_rect :
-  forall P : forall n : nat, fin n -> Type,
+Definition rect :
+  forall P : forall n : nat, t n -> Type,
   (forall n, P n.+1 (inl ())) -> (forall n p, P n p -> P n.+1 (inr p)) ->
   forall n p, P n p.
 Proof.
@@ -54,10 +54,10 @@ Proof.
   move=> n IH //=; elim; first case; auto.
 Defined.
 
-Definition fin2nat (n : nat) (a : fin n) : nat :=
-  fin_rect (fun _ _ => nat) (fun _ => 0) (fun _ _ n => n.+1) n a.
+Definition to_nat (n : nat) (a : t n) : nat :=
+  rect (fun _ _ => nat) (fun _ => 0) (fun _ _ n => n.+1) n a.
 
-Definition nat2fin : forall (n m : nat), fin m.+1.
+Definition of_nat : forall (n m : nat), t m.+1.
 Proof.
   elim.
   - by move=> m; apply inl.
@@ -66,73 +66,72 @@ Proof.
     - move=> m; apply inr, IHn.
 Defined.
 
-Lemma fin2nat_range : forall n a, lt (fin2nat n a) n.
+Lemma to_nat_range : forall n a, lt (to_nat n a) n.
 Proof.
-  apply fin_rect => //= [n | n p IH]; ssromega.
+  apply rect => //= [n | n p IH]; ssromega.
 Qed.
 
-Lemma fin2nat_inv : forall n a, a = nat2fin (fin2nat n.+1 a) n.
+Lemma fin2nat_inv : forall n a, a = of_nat (to_nat n.+1 a) n.
 Proof.
-  by apply fin_rectS=> //= n p H; f_equal.
+  by apply rectS=> //= n p H; f_equal.
 Qed.
 
-Definition fin_shift n m (a : fin n) : fin (n + m).
+Definition L n m (a : t n) : t (n + m).
 Proof.
-  move: n a; apply fin_rect=> n //=.
+  move: n a; apply rect=> n //=.
   - by apply inl.
   - by move=> _ r; apply inr.
 Defined.
 
-Definition fin_plus n m (a : fin n) (b : fin m) : fin (n + m).-1.
+Definition plus n m (a : t n) (b : t m) : t (n + m).-1.
 Proof.
-  move: n a; apply fin_rect=> n.
+  move: n a; apply rect=> n.
   - rewrite //= -/addn addnC.
-    apply (fin_shift m n b).
+    apply (L m n b).
   - case: n; first case.
     simpl=> n _ r; right; apply r.
 Defined.
 
-Lemma fin_shift_ident :
-  forall n m a, fin2nat n a = fin2nat (n + m) (fin_shift n m a).
+Lemma L_ident : forall n m a, to_nat n a = to_nat (n + m) (L n m a).
 Proof.
-  move=> n m; move: n; apply fin_rect=> //= n a IHa; f_equal; apply IHa.
+  move=> n m; move: n; apply rect=> //= n a IHa; f_equal; apply IHa.
 Qed.
 
-Lemma fin_plus_is_plus : forall n m a b,
-  fin2nat n a + fin2nat m b = fin2nat (n + m).-1 (fin_plus n m a b).
+Lemma plus_to_nat_reg :
+  forall n m a b, to_nat n a + to_nat m b = to_nat (n + m).-1 (plus n m a b).
 Proof.
-  move=> n m a b; move: n a; apply fin_rect=> n.
+  move=> n m a b; move: n a; apply rect=> n.
   - rewrite /addn //= -/addn /eq_rec_r /eq_rec /eq_rect.
     case (eq_sym (addnC n m)).
-    apply fin_shift_ident.
-  - rewrite {2}(lock fin_plus) //= -/addn; unlock.
+    apply L_ident.
+  - rewrite {2}(lock plus) //= -/addn; unlock.
     case: n; first case.
     by move=> n; rewrite /addn => //= p H; f_equal.
 Qed.
 
-Lemma eqmap_nat_fin :
-  forall n m a b, n = m -> fin2nat n a = fin2nat m b -> a ~= b.
+Lemma to_nat_eq_inv :
+  forall n m a b, n = m -> to_nat n a = to_nat m b -> a ~= b.
 Proof.
-  move=> n m a; move: n a m; refine (fin_rect _ _ _)=> n.
-  - by refine (fin_case _ _ _)=> //= m; case=> H _; rewrite H.
-  - move=> a IHa; refine (fin_case _ _ _)=> m //= b.
+  move=> n m a; move: n a m; refine (rect _ _ _)=> n.
+  - by refine (rect_case _ _ _)=> //= m; case=> H _; rewrite H.
+  - move=> a IHa; refine (rect_case _ _ _)=> m //= b.
     by case=> H; case=> H0; rewrite (IHa _ _ H H0).
 Qed.
 
-Lemma fin_plus_comm : forall n m a b, fin_plus n m a b ~= fin_plus m n b a.
+Lemma plus_comm : forall n m a b, plus n m a b ~= plus m n b a.
 Proof.
-  move=> n m a b; apply eqmap_nat_fin; first ssromega.
-  rewrite -!fin_plus_is_plus; move: n a; apply fin_rect=> //= n a; ssromega.
+  move=> n m a b; apply to_nat_eq_inv; first ssromega.
+  rewrite -!plus_to_nat_reg; move: n a; apply rect=> //= n a; ssromega.
 Qed.
 
-Fixpoint enumerate_fin n : seq (fin n) :=
+Fixpoint enumerate_fin n : seq (t n) :=
   if n is n.+1
     then inl () :: map inr (enumerate_fin n)
     else [::].
 
 Goal forall n v, foldr (fun v' p => v = v' \/ p) False (enumerate_fin n).
 Proof.
-  apply fin_rect=> //= n.
+  apply rect=> //= n.
   - by left.
   - move=> v' IH; right; move: IH.
     elim (enumerate_fin n)=> //= v vs IH; case.
