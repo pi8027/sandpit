@@ -94,10 +94,10 @@ Proof.
   - by move=> _ r; apply inr.
 Defined.
 
-Fixpoint R n m (a : t m) : t (n + m) :=
-  match n with
+Fixpoint R n m (a : t n) : t (m + n) :=
+  match m with
     | 0 => a
-    | S n => inr (R n m a)
+    | S m => inr (R n m a)
   end.
 
 Definition plus n m (a : t n) (b : t m) : t (n + m).-1.
@@ -109,9 +109,14 @@ Proof.
     simpl=> n _ r; right; apply r.
 Defined.
 
-Lemma L_ident : forall n m a, to_nat n a = to_nat (n + m) (L n m a).
+Lemma L_sanity : forall n m a, to_nat n a = to_nat (n + m) (L n m a).
 Proof.
   move=> n m; move: n; apply rect=> //= n a IHa; f_equal; apply IHa.
+Qed.
+
+Lemma R_sanity : forall n m a, m + to_nat n a = to_nat (m + n) (R n m a).
+Proof.
+  by move=> n; elim=> //= m IHm a; rewrite /addn //=; f_equal.
 Qed.
 
 Lemma plus_to_nat_distr :
@@ -119,7 +124,7 @@ Lemma plus_to_nat_distr :
 Proof.
   move=> n m a b; move: n a; apply rect=> n.
   - rewrite /addn //= -/addn /eq_rec_r /eq_rec /eq_rect.
-    case (eq_sym (addnC n m)); apply L_ident.
+    case (eq_sym (addnC n m)); apply L_sanity.
   - rewrite {2}(lock plus) //= -/addn; unlock.
     case: n; first case.
     by move=> n; rewrite /addn => //= p H; f_equal.
