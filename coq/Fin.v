@@ -97,13 +97,12 @@ Proof.
   move=> n m; move: n; apply rect=> //= n a IHa; f_equal; apply IHa.
 Qed.
 
-Lemma plus_to_nat_reg :
+Lemma plus_to_nat_distr :
   forall n m a b, to_nat n a + to_nat m b = to_nat (n + m).-1 (plus n m a b).
 Proof.
   move=> n m a b; move: n a; apply rect=> n.
   - rewrite /addn //= -/addn /eq_rec_r /eq_rec /eq_rect.
-    case (eq_sym (addnC n m)).
-    apply L_ident.
+    case (eq_sym (addnC n m)); apply L_ident.
   - rewrite {2}(lock plus) //= -/addn; unlock.
     case: n; first case.
     by move=> n; rewrite /addn => //= p H; f_equal.
@@ -121,7 +120,7 @@ Qed.
 Lemma plus_comm : forall n m a b, plus n m a b ~= plus m n b a.
 Proof.
   move=> n m a b; apply to_nat_eq_inv; first ssromega.
-  rewrite -!plus_to_nat_reg; move: n a; apply rect=> //= n a; ssromega.
+  rewrite -!plus_to_nat_distr; move: n a; apply rect=> //= n a; ssromega.
 Qed.
 
 Fixpoint enumerate_fin n : seq (t n) :=
