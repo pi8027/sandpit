@@ -71,9 +71,20 @@ Proof.
   apply rect => //= [n | n p IH]; ssromega.
 Qed.
 
-Lemma fin2nat_inv : forall n a, a = of_nat (to_nat n.+1 a) n.
+Lemma to_nat_of_nat_inv : forall n a, a = of_nat (to_nat n.+1 a) n.
 Proof.
   by apply rectS=> //= n p H; f_equal.
+Qed.
+
+Lemma to_nat_eq_conserve :
+  forall n m a b, n = m -> (a ~= b <-> to_nat n a = to_nat m b).
+Proof.
+  move=> n m a b H; split.
+  - by move: b; rewrite -H=> b H0; f_equal; apply JMeq_eq.
+  - move: n a m b H; refine (rect _ _ _)=> n.
+    - by refine (rect_case _ _ _)=> //= m; case=> H _; rewrite H.
+    - move=> a IHa; refine (rect_case _ _ _)=> m //= b.
+      by case=> H; case=> H0; rewrite (IHa _ _ H H0).
 Qed.
 
 Definition L n m (a : t n) : t (n + m).
@@ -82,6 +93,12 @@ Proof.
   - by apply inl.
   - by move=> _ r; apply inr.
 Defined.
+
+Fixpoint R n m (a : t m) : t (n + m) :=
+  match n with
+    | 0 => a
+    | S n => inr (R n m a)
+  end.
 
 Definition plus n m (a : t n) (b : t m) : t (n + m).-1.
 Proof.
@@ -108,18 +125,9 @@ Proof.
     by move=> n; rewrite /addn => //= p H; f_equal.
 Qed.
 
-Lemma to_nat_eq_inv :
-  forall n m a b, n = m -> to_nat n a = to_nat m b -> a ~= b.
-Proof.
-  move=> n m a; move: n a m; refine (rect _ _ _)=> n.
-  - by refine (rect_case _ _ _)=> //= m; case=> H _; rewrite H.
-  - move=> a IHa; refine (rect_case _ _ _)=> m //= b.
-    by case=> H; case=> H0; rewrite (IHa _ _ H H0).
-Qed.
-
 Lemma plus_comm : forall n m a b, plus n m a b ~= plus m n b a.
 Proof.
-  move=> n m a b; apply to_nat_eq_inv; first ssromega.
+  move=> n m a b; rewrite to_nat_eq_conserve; last ssromega.
   rewrite -!plus_to_nat_distr; move: n a; apply rect=> //= n a; ssromega.
 Qed.
 
