@@ -6,7 +6,7 @@ Set Implicit Arguments.
 Ltac ssromega := rewrite ?NatTrec.trecE -?plusE -?minusE -?multE; omega.
 
 Fixpoint t (n : nat) : Set :=
-  (if n is n.+1 then ()+t n else Empty_set)%type.
+  (if n is n.+1 then option (t n) else Empty_set)%type.
 
 Definition rect_case0 : forall (P : t 0 -> Type) p, P p.
 Proof.
@@ -15,43 +15,43 @@ Defined.
 
 Definition rect_caseS :
   forall P : forall n, t n.+1 -> Type,
-  (forall n, P n (inl ())) -> (forall n (p : t n), P n (inr p)) ->
+  (forall n, P n None) -> (forall n (p : t n), P n (Some p)) ->
   forall n (p : t n.+1), P n p.
 Proof.
   move=> P H0 H1; case; simpl.
-  - case; case; apply H0.
+  - case; [case | apply H0].
   - move=> n; case.
-    - case; apply H0.
     - move=> p; apply H1.
+    - apply H0.
 Defined.
 
 Definition rect_case :
   forall P : forall n : nat, t n -> Type,
-  (forall n, P n.+1 (inl ())) -> (forall n (p : t n), P n.+1 (inr p)) ->
+  (forall n, P n.+1 None) -> (forall n (p : t n), P n.+1 (Some p)) ->
   forall n p, P n p.
 Proof.
-  by move=> P H0 H1; case; last move=> n //=; case; first case.
+  by move=> P H0 H1; case; last move=> n //=; case.
 Defined.
 
 Definition rectS :
   forall P : forall n : nat, t n.+1 -> Type,
-  (forall n, P n (inl ())) -> (forall n p, P n p -> P n.+1 (inr p)) ->
+  (forall n, P n None) -> (forall n p, P n p -> P n.+1 (Some p)) ->
   forall n p, P n p.
 Proof.
   move=> P H0 H1; elim; simpl.
-  - case; case; apply H0.
+  - case; [case | apply H0].
   - move=> n IHn; case.
-    - case; apply H0.
     - by move=> p; apply H1.
+    - apply H0.
 Defined.
 
 Definition rect :
   forall P : forall n : nat, t n -> Type,
-  (forall n, P n.+1 (inl ())) -> (forall n p, P n p -> P n.+1 (inr p)) ->
+  (forall n, P n.+1 None) -> (forall n p, P n p -> P n.+1 (Some p)) ->
   forall n p, P n p.
 Proof.
   move=> P H0 H1; elim; first case.
-  move=> n IH //=; elim; first case; auto.
+  move=> n IH //=; case; auto.
 Defined.
 
 Definition to_nat (n : nat) (a : t n) : nat :=
@@ -60,10 +60,10 @@ Definition to_nat (n : nat) (a : t n) : nat :=
 Definition of_nat : forall (n m : nat), t m.+1.
 Proof.
   elim.
-  - by move=> m; apply inl.
+  - by move=> m; apply None.
   - simpl=> n IHn; case.
-    - by apply inl.
-    - move=> m; apply inr, IHn.
+    - by apply None.
+    - move=> m; apply Some, IHn.
 Defined.
 
 Lemma to_nat_range : forall n a, lt (to_nat n a) n.
@@ -90,14 +90,14 @@ Qed.
 Definition L n m (a : t n) : t (n + m).
 Proof.
   move: n a; apply rect=> n //=.
-  - by apply inl.
-  - by move=> _ r; apply inr.
+  - by apply None.
+  - by move=> _ r; apply Some.
 Defined.
 
 Fixpoint R n m (a : t n) : t (m + n) :=
   match m with
     | 0 => a
-    | S m => inr (R n m a)
+    | S m => Some (R n m a)
   end.
 
 Definition plus n m (a : t n) (b : t m) : t (n + m).-1.
@@ -106,7 +106,7 @@ Proof.
   - rewrite //= -/addn addnC.
     apply (L m n b).
   - case: n; first case.
-    simpl=> n _ r; right; apply r.
+    simpl=> n _ r; apply Some; apply r.
 Defined.
 
 Lemma L_sanity : forall n m a, to_nat n a = to_nat (n + m) (L n m a).
@@ -138,7 +138,7 @@ Qed.
 
 Fixpoint enumerate_fin n : seq (t n) :=
   if n is n.+1
-    then inl () :: map inr (enumerate_fin n)
+    then None :: map Some (enumerate_fin n)
     else [::].
 
 Goal forall n v, foldr (fun v' p => v = v' \/ p) False (enumerate_fin n).
