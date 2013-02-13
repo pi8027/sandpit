@@ -1,4 +1,3 @@
-
 module Main where
 
 import Data.Char
@@ -79,4 +78,3 @@ main = do
             putStr "\n"
         err -> print err
     isEOF >>= (`unless` main)
-
