@@ -51,6 +51,6 @@ Canonical seqElem_appr (x : T) (l : seq T) (r : seqElem x) : seqElem x :=
 
 End SeqElem.
 
-Goal forall n, 1 \in ((3 :: nseq n n) ++ [:: 2; 1] ++ nseq n n).
+Goal forall n, 1 \in 3 :: (nseq n n ++ [:: 2; 1]) ++ nseq n n.
 move => n; apply seqElemProof.
 Qed.
