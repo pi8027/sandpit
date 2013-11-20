@@ -38,20 +38,17 @@ Ltac partition xs P :=
       partition xs B => Hb;
       match goal with
         | Ha : _ <-> ?Al /\ ?Ar, Hb : _ <-> ?Bl /\ ?Br |- _ =>
-          let Hl := fresh "H" in
-          let Hr := fresh "H" in
-          match constr: (Al, Bl) with
-            | (unit, _) => move: (iff_sym (left_unit Bl))
-            | (_, unit) => move: (iff_sym (right_unit Al))
-            | _ => move: (iff_refl (Al /\ Bl))
-          end; move => Hl;
-          match constr: (Ar, Br) with
-            | (unit, _) => move: (iff_sym (left_unit Br))
-            | (_, unit) => move: (iff_sym (right_unit Ar))
-            | _ => move: (iff_refl (Ar /\ Br))
-          end; move => Hr;
-          move: (iff_trans (partitionL1 Ha Hb) (partitionL2 Hl Hr)) =>
-            {Ha Hb Hl Hr}
+          let Hl := match constr: (Al, Bl) with
+            | (unit, _) => constr: (iff_sym (left_unit Bl))
+            | (_, unit) => constr: (iff_sym (right_unit Al))
+            | _ => constr: (iff_refl (Al /\ Bl))
+          end in
+          let Hr := match constr: (Ar, Br) with
+            | (unit, _) => constr: (iff_sym (left_unit Br))
+            | (_, unit) => constr: (iff_sym (right_unit Ar))
+            | _ => constr: (iff_refl (Ar /\ Br))
+          end in
+          move: (iff_trans (partitionL1 Ha Hb) (partitionL2 Hl Hr)) => {Ha Hb}
       end
     | ?X =>
       let inl := decide_in X xs in
@@ -65,6 +62,10 @@ Goal False.
   move: True True True True True True True True => A B C D E F G H.
   partition [:: A; C; F] (A /\ (B /\ C /\ D) /\ E /\ (F /\ G) /\ H).
   move => _.
+  partition [:: F; C; A] (A /\ (B /\ C /\ D) /\ E /\ (F /\ G) /\ H).
+  move => _.
   partition [:: A; C; D; G] ((A /\ B /\ C) /\ D /\ (E /\ F /\ G) /\ H).
+  move => _.
+  partition [:: D; A; G; C] ((A /\ B /\ C) /\ D /\ (E /\ F /\ G) /\ H).
   move => _.
 Abort.
