@@ -3,7 +3,7 @@
 *)
 
 Require Import
-  ssreflect ssrfun ssrbool eqtype ssrnat seq fintype div bigop prime.
+  ssreflect ssrfun ssrbool eqtype ssrnat seq fintype div bigop prime binomial.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -31,44 +31,39 @@ Fixpoint search_prime n m :=
       then search_prime n.+1 m
       else 0.
 
-Definition next_prime n := search_prime n (\prod_(0 <= m < n) m.+1).+1.
+Definition next_prime n := search_prime n n`!.+1.
 
 Lemma next_prime_is_prime n : prime (next_prime n).
 Proof.
-  have H' m: 0 < \prod_(0 <= i < m) i.+1
-    by apply big_ind => //; do 2 case => // ?.
   suff: next_prime n != 0 by
-    rewrite /next_prime; move: _.+1 => m;
+    rewrite /next_prime; move: n`!.+1 => m;
       elim: m n => /= [| m IH] n; case: ifP => //= _; apply IH.
   rewrite /next_prime; apply/negP => H.
-  have {H} H p : n <= p <= (\prod_(0 <= m < n) m.+1).+1 + n -> ~~ prime p.
-    move: H; move: _.+1 => m; elim: m n => /= [| m IH] n.
+  have {H} H p : n <= p <= n`!.+1 + n -> ~~ prime p.
+    move: H; move: n`!.+1 => m; elim: m n => /= [| m IH] n.
     - by rewrite add0n -eqn_leq => H; move/eqP => <-;
         apply/negP => H0; move: H; rewrite H0 /=; case: n H0.
     - case: ifP; first by case: n.
       move => H; move/IH => {IH} H0; rewrite leq_eqVlt; case/andP; case/orP.
       + by move/eqP => <-; rewrite H.
       + by rewrite addSnnS => H1 H2; apply/H0/andP.
-  suff: prime (\prod_(0 <= m < n) m.+1).+1
+  suff: prime n`!.+1
     by apply/negP/H; rewrite leq_addr andbT {H}; apply leqW;
-      case: n => //= n; rewrite big_nat_recr /= -{1}(mul1n n.+1) leq_mul2r //=.
-  apply/primeP'; split; first by rewrite ltnS.
+      case: n => //= n; rewrite factS -{1}(muln1 n.+1) leq_mul2l fact_gt0.
+  apply/primeP'; split; first by rewrite ltnS fact_gt0.
   move => p'; rewrite ltnS => H0 H1 H2; case (leqP p' n) => H3;
-    last by by move: (H p'); rewrite (ltnW H3);
-      move/(_ (leq_trans (leqW H0) (leq_addr _ _)))/negP; apply.
+    last by move: (H p'); rewrite (ltnW H3);
+      move/(_ (leq_trans (leqW H0) (leq_addr _ _)))/negP.
   move: H2; rewrite -addn1 dvdn_addr;
     first by rewrite dvdn1; move/eqP => ?; subst p'; move: H1.
-  rewrite big_mkord -(subnKC (leq_trans (leq_pred _) H3)) big_split_ord /=.
-  apply dvdn_mull; case: p' H0 H1 H3 => //= p' H0 H1.
-  rewrite -subn_gt0; case: (n - p') => // m _.
-  by rewrite -(big_mkord xpredT (fun i => (p' + i).+1))
-             big_nat_recl addn0; apply dvdn_mulr.
+  by rewrite -(ffact_fact (leq_subr p' n)) subKn //; apply dvdn_mull;
+    case: p' H1 {H H0 H3} => // p' _; rewrite factS; apply dvdn_mulr.
 Qed.
 
 Lemma next_prime_smallest n p : n <= p < next_prime n -> ~~ prime p.
 Proof.
   move: (next_prime_is_prime n).
-  rewrite /next_prime; move: _.+1 => m.
+  rewrite /next_prime; move: n`!.+1 => m.
   elim: m n => //= [| m IH] n; case: ifP => //=;
     try by move => _ _; case/andP;
            rewrite -ltnS => H; move/(leq_trans H); rewrite ltnn.
