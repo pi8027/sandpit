@@ -97,8 +97,13 @@ Lemma size_rep (T : finType) (xs : seq T) n :
   size (rep xs n) = n * size xs.
 Proof. by elim: n => //= n H; rewrite size_cat H mulSn. Qed.
 
+Lemma rev_nseq T n (x : T) : rev (nseq n x) = nseq n x.
+Proof.
+  by elim: n => //= n; rewrite rev_cons => ->; elim: n => //= n ->.
+Qed.
+
 Lemma prime_not_regular (T : finType) (c : T) :
-  ~ regular (fun (s : seq T) => prime (size s)).
+  ~ regular (fun s : seq T => prime (size s)).
 Proof.
   apply pumping => k; exists (nseq (next_prime k.+2 - k) c), (nseq k c), [::];
     do !split; last move => u v w H.
@@ -118,4 +123,42 @@ Proof.
         rewrite ltn_subRL addn1 -!addnS;
         apply leq_trans with (u + v.+3) => //; apply leq_addl.
     + by apply leq_trans with (u + v.+1).+2 => //; do 2 apply leqW.
+Qed.
+
+Goal forall (T : finType) (a b : T),
+  a != b ->
+  ~ regular (fun s => count (fun c => c == a) s = count (fun c => c == b) s).
+Proof.
+  move => T a b; move/negbTE => H.
+  apply pumping => k.
+  exists [::], (nseq k a), (nseq k b).
+  rewrite cat0s size_nseq leqnn !count_cat !non_regular.count_nseq
+          !eqxx (@eq_sym _ b a) H /= mul1n mul0n addn0 add0n.
+  do !split.
+  move => u v w H0.
+  case/(@nseq_eq_cat T): H0 (H0) => <-; case/(@nseq_eq_cat T) => <- <-.
+  move: {u v w} (size u) (size v) (size w) => u v w.
+  rewrite !cat_nseq_eq addnA.
+  move/(f_equal size); rewrite !size_nseq => -> {k}; case: v => // v _.
+  exists 0 => /=; move/eqP.
+  by rewrite !count_cat !non_regular.count_nseq !eqxx (@eq_sym _ b a) H /=
+          !mul1n !mul0n !add0n -addnA eqn_add2l addnC eqn_add2r.
+Qed.
+
+Lemma palindromes_not_regular (T : finType) (a b : T) :
+  a != b -> ~ regular (fun s : seq T => s = rev s).
+Proof.
+  move/negbTE => H; apply pumping => k.
+  exists [::], (nseq k a), (b :: nseq k a).
+  rewrite size_nseq /= rev_cat rev_cons -cats1 -catA /= rev_nseq.
+  do !split => //.
+  move => u v w H0.
+  case/(@nseq_eq_cat T): H0 (H0) => <-; case/(@nseq_eq_cat T) => <- <-.
+  move: {u v w} (size u) (size v) (size w) => u v w.
+  rewrite !cat_nseq_eq addnA.
+  move/(f_equal size); rewrite !size_nseq => -> {k}; case: v => // v _.
+  exists 0 => /=; move/eqP.
+  by rewrite
+    !rev_cat rev_cons -cats1 -!catA /= !rev_nseq catA !cat_nseq_eq
+    addnAC -(cat_nseq_eq (u + w)) -catA eqseq_cat // eqxx eqE /= eq_sym H /=.
 Qed.
