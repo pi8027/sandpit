@@ -81,18 +81,15 @@ Proof.
     move: H0; rewrite -/(merge_pair (x :: x' :: xs)).
     move: {n x x' xs H} [:: _, _ & _].
     fix IH 1.
-    case => // x [] //= x' xs /and3P [H H0 H1]; apply/andP; split.
-    + elim: x x' H H0 {xs H1} => // x xs IHx; elim => // y ys IHy H H0 /=.
-      case: ifP => H1.
-      * move: H; rewrite !sortedE => /andP [H2 H3]; apply/andP; split.
-        - by case: xs H2 {IHx IHy H3} => //= x' xs H2; case: ifP.
-        - by apply IHx.
-      * move: H0; rewrite !sortedE; case/andP => H2 H3; apply/andP; split.
-        - case: ys H2 {IHx IHy H3} => //.
-          + by move => _; apply asym; rewrite H1.
-          + by move => y' ys H2; case: ifP => // _; apply asym; rewrite H1.
-        - by apply IHy.
-    + by apply IH.
+    case => // x [] //= x' xs /and3P [H H0 H1]; rewrite IH // andbT.
+    elim: x x' H H0 {xs H1} => // x xs IHx; elim => // y ys IHy H H0 /=.
+    case: ifP => H1.
+    + move: H; rewrite !sortedE => /andP [H2 H3]; rewrite IHx // andbT.
+      by case: xs H2 {IHx IHy H3} => //= x' xs H2; case: ifP.
+    + move: H0; rewrite !sortedE; case/andP => H2 H3; rewrite IHy // andbT.
+      case: ys H2 {IHx IHy H3} => //.
+      * by move => _; apply asym; rewrite H1.
+      * by move => y' ys H2; case: ifP => // _; apply asym; rewrite H1.
 Qed.
 
 (*
