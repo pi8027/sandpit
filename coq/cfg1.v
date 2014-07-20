@@ -70,8 +70,7 @@ Proof.
     + by rewrite !Lbc => _ H; apply IH.
 Qed.
 
-Lemma splitL_splitted (x : int) s :
-  x != 0%R -> splitted x (splitL x s).1.
+Lemma splitL_splitted (x : int) s : x != 0%R -> splitted x (splitL x s).1.
 Proof.
   elim: s x => //= b s IH x H; case: ifP => /= H0.
   - by case => //; rewrite take0 Lb0 eq_sym.
