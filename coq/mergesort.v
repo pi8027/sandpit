@@ -35,22 +35,24 @@ Fixpoint merge_pair xs :=
   end.
 
 Fixpoint mergesort' xs n :=
-  match n with
-    | 0 => [::]
-    | S n =>
-      match xs with
-        | [:: x] => x
-        | _ => mergesort' (merge_pair xs) n
-      end
-  end.
+  if n is n.+1
+    then (if xs is [:: x] then x else mergesort' (merge_pair xs) n)
+    else [::].
 
 Definition mergesort (xs : seq A) : seq A :=
   mergesort' (map (fun x => [:: x]) xs) (size xs).
 
+Fixpoint list2_rec (A : Type) (P : seq A -> Set)
+  (c1 : P [::]) (c2 : forall x, P [:: x])
+  (c3 : forall x x' xs, P xs -> P [:: x, x' & xs]) (xs : seq A) : P xs :=
+  match xs with
+    | [::] => c1
+    | [:: x] => c2 x
+    | [:: x, x' & xs] => c3 x x' xs (list2_rec c1 c2 c3 xs)
+  end.
+
 Lemma merge_pair_decreasing xs : size (merge_pair xs) <= size xs.
-Proof.
-  by move: xs; fix IH 1; case => //= _ [] //= _ xs; rewrite ltnS; apply leqW.
-Qed.
+Proof. by elim/list2_rec: xs => //= _ _ xs H; rewrite ltnS; apply leqW. Qed.
 
 (*
 sorted の証明
@@ -72,24 +74,23 @@ Proof.
   set xs' := map _ _.
   have H: all sorted xs' by rewrite {}/xs'; elim: xs.
   have H0: size xs' <= size xs by rewrite /xs' size_map.
-  elim: {xs} (size xs) xs' H0 H => //= n IH [].
-  - by move => _ _; apply IH.
-  - move => x [] //; first by move => _ /andP [].
-    move => x' xs H H0; apply: IH;
-      first by rewrite /=; apply leq_ltn_trans with (size xs) => //;
-                 apply merge_pair_decreasing.
-    move: H0; rewrite -/(merge_pair (x :: x' :: xs)).
-    move: {n x x' xs H} [:: _, _ & _].
-    fix IH 1.
-    case => // x [] //= x' xs /and3P [H H0 H1]; rewrite IH // andbT.
-    elim: x x' H H0 {xs H1} => // x xs IHx; elim => // y ys IHy H H0 /=.
-    case: ifP => H1.
-    + move: H; rewrite !sortedE => /andP [H2 H3]; rewrite IHx // andbT.
-      by case: xs H2 {IHx IHy H3} => //= x' xs H2; case: ifP.
-    + move: H0; rewrite !sortedE; case/andP => H2 H3; rewrite IHy // andbT.
-      case: ys H2 {IHx IHy H3} => //.
-      * by move => _; apply asym; rewrite H1.
-      * by move => y' ys H2; case: ifP => // _; apply asym; rewrite H1.
+  elim: {xs} (size xs) xs' H0 H => //= n IH [];
+    first by move => _ _; apply IH.
+  move => x [] //; first by move => _ /andP [].
+  move => x' xs H H0; apply: IH;
+    first by rewrite /=; apply leq_ltn_trans with (size xs) => //;
+               apply merge_pair_decreasing.
+  move: H0; rewrite -/(merge_pair (x :: x' :: xs)).
+  elim/list2_rec: {n x x' xs H} [:: _, _ & _] =>
+    //= x x' xs IH /and3P [H H0 H1]; rewrite {}IH // andbT.
+  elim: x x' H H0 {xs H1} => // x xs IHx;
+    elim => // y ys IHy H H0 /=; case: ifP => H1.
+  - move: H; rewrite !sortedE => /andP [H2 H3]; rewrite IHx // andbT.
+    by case: xs H2 {IHx IHy H3} => //= x' xs; case: ifP.
+  - move: H0; rewrite !sortedE; case/andP => H2 H3; rewrite IHy // andbT.
+    case: ys H2 {IHx IHy H3} => //.
+    + by move => _; apply asym; rewrite H1.
+    + by move => y' ys; case: ifP => // _ _; apply asym; rewrite H1.
 Qed.
 
 (*
@@ -148,10 +149,9 @@ Proof.
   apply perm_trans with (flatten (merge_pair (x :: x' :: xs)));
     last by apply IH => /=; apply leq_ltn_trans with (size xs) => //;
             apply merge_pair_decreasing.
-  move: {n x x' xs IH H} [:: _, _ & _].
-  fix IH 1.
-  case => //= x [] //= x' xs; rewrite catA; apply perm_cat; last by apply IH.
-  elim: x x' {xs IH} => // x xs IHx; elim; first by rewrite cats0.
+  elim/list2_rec: {n x x' xs IH H} [:: _, _ & _] =>
+    //= x x' xs; rewrite catA; apply perm_cat.
+  elim: x x' {xs} => // x xs IHx; elim; first by rewrite cats0.
   move => y ys IHy /=; case: ifP => _.
   - constructor; apply IHx.
   - apply perm_trans with (y :: ys ++ x :: xs);
