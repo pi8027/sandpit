@@ -142,7 +142,7 @@ Proof.
   case/dvdnP => n ->; exists n.+1; apply/negP/negPn/eqP.
   rewrite rep_nseq !rev_cat rev_cons -cats1 !rev_nseq.
   rewrite !(catA, cat_nseq_eq) -!catA !cat_nseq_eq /=.
-  repeat match goal with |- @eq nat _ _ => idtac | |- _ _ => f_equal end.
+  repeat match goal with |- @eq nat _ _ => idtac | |- _ => f_equal end.
   - by rewrite (addnAC u v.+1) -(addnA _ v.+1) -mulSn addnAC.
   - by rewrite (addnAC u) -addnA -mulSn (addnC u) addnAC addnA.
 Qed.
@@ -162,7 +162,7 @@ Proof.
   by rewrite dvdn_addr ?dvdn_fact ?prime_gt0 // gtnNdvd ?prime_gt1.
 Qed.
 
-Lemma size_rep (T : finType) (xs : seq T) n : size (rep xs n) = n * size xs.
+Lemma size_rep (T : eqType) (xs : seq T) n : size (rep xs n) = n * size xs.
 Proof. by elim: n => //= n H; rewrite size_cat H mulSn. Qed.
 
 Lemma primes_non_regular (T : finType) (a : T) :
