@@ -147,7 +147,7 @@ Proof.
   - by rewrite (addnAC u) -addnA -mulSn (addnC u) addnAC addnA.
 Qed.
 
-(* 4 *)
+(* 5 *)
 
 Lemma dvdn_fact m n : 0 < m <= n -> m %| n`!.
 Proof.
