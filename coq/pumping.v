@@ -119,6 +119,12 @@ Qed.
 
 (* 4 *)
 
+Lemma dvdn_fact m n : 0 < m <= n -> m %| n`!.
+Proof.
+  case: m => //= m; elim: n => //= n IHn; rewrite ltnS leq_eqVlt.
+  by case/predU1P=> [-> | /IHn]; [apply: dvdn_mulr | apply: dvdn_mull].
+Qed.
+
 Lemma rep_nseq (T : eqType) (a : T) m n : rep (nseq n a) m = nseq (m * n) a.
 Proof. by elim: m => //= m ->; rewrite cat_nseq_eq mulSn. Qed.
 
@@ -135,11 +141,9 @@ Proof.
   move: {u v w} (size u) (size v) (size w) => u v w.
   rewrite !cat_nseq_eq addnA.
   move/(f_equal size); rewrite !size_nseq => -> {k}; case: v => // v _.
-  have: v.+1 %| (u + v.+1 + w)`!.
-    rewrite addnAC; elim: (u + w);
-      first by rewrite add0n /= factS; apply dvdn_mulr.
-    by move => n IH; rewrite addSn factS; apply dvdn_mull.
-  case/dvdnP => n ->; exists n.+1; apply/negP/negPn/eqP.
+  have/dvdn_fact/dvdnP[n ->] : 0 < v.+1 <= u + v.+1 + w
+    by rewrite addnAC addnS !ltnS leq0n leq_addl.
+  exists n.+1; apply/negP/negPn/eqP.
   rewrite rep_nseq !rev_cat rev_cons -cats1 !rev_nseq.
   rewrite !(catA, cat_nseq_eq) -!catA !cat_nseq_eq /=.
   repeat match goal with |- @eq nat _ _ => idtac | |- _ => f_equal end.
@@ -148,12 +152,6 @@ Proof.
 Qed.
 
 (* 5 *)
-
-Lemma dvdn_fact m n : 0 < m <= n -> m %| n`!.
-Proof.
-  case: m => //= m; elim: n => //= n IHn; rewrite ltnS leq_eqVlt.
-  by case/predU1P=> [-> | /IHn]; [apply: dvdn_mulr | apply: dvdn_mull].
-Qed.
 
 Lemma prime_above m : {p | m < p & prime p}.
 Proof.
