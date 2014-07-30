@@ -163,20 +163,32 @@ Qed.
 Lemma size_rep (T : eqType) (xs : seq T) n : size (rep xs n) = n * size xs.
 Proof. by elim: n => //= n H; rewrite size_cat H mulSn. Qed.
 
+Lemma pumping_size (T : finType) (a : T) (L : nat -> Prop) :
+  (forall k, exists x y : nat,
+    k <= y /\ L (x + y) /\
+    forall u v, y = u + v -> v != 0 -> exists i, L (x + u + i * v) -> False) ->
+  ~ regular (fun s : seq T => L (size s)).
+Proof.
+  move => H; apply pumping => k; move: H => /(_ k) [x [y [H0 [H1 H]]]].
+  exists (nseq x a), (nseq y a), [::]; rewrite !size_cat /= addn0 !size_nseq;
+    do !split => //; move => {k H0 H1} u v w H0.
+  case/(@nseq_eq_cat T): H0 (H0) H => <-; case/(@nseq_eq_cat T) => <- <-.
+  move: {u v w} (size u) (size v) (size w) => u v w.
+  move/(f_equal size); rewrite !size_cat !size_nseq => -> /(_ (u + w) v);
+    case: v => // v; rewrite -addnA (addnC v.+1) => /(_ erefl erefl) [i H] _.
+  by exists i; rewrite !size_cat size_rep !size_nseq /= addn0
+                       (addnC (_ * _)) !addnA -(addnA x).
+Qed.
+
+Arguments pumping_size [T] _ _ _ _.
+
 Lemma primes_non_regular (T : finType) (a : T) :
   ~ regular (fun s : seq T => prime (size s)).
 Proof.
-  apply pumping => k.
-  case: (prime_above k.+1) => p.
-  move/subnK => <-; move: (p - k.+2) => {p} p Hp.
-  exists (nseq p.+2 a), (nseq k a), [::].
-  rewrite size_nseq cats0 size_cat !size_nseq !addSnnS;
-    do !split => //; move => u v w {Hp}.
-  do 2 case/(@nseq_eq_cat T) => <-; move => <-.
-  move: {u v w} (size u) (size v) (size w) => u [] // v w _.
-  exists (p.+2 + u + w).
-  rewrite 3!size_cat cats0 size_rep !size_nseq !addnA addnAC -mulnS.
-  apply/negP/primePn; right; exists v.+2.
+  apply (pumping_size a prime) => k {T a}.
+  case: (prime_above k.+1) => p; move/subnK => <-; move: (p - k.+2) => {p} p Hp.
+  exists p.+2, k; rewrite !addSnnS; do !split => //; move => u [] // v {Hp} _ _.
+  exists (p.+2 + u); rewrite -mulnS; apply/negP/primePn; right; exists v.+2.
   - by rewrite ltnS /=; apply ltn_Pmull.
   - by rewrite dvdn_mull.
 Qed.
