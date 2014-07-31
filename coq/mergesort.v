@@ -93,49 +93,13 @@ Proof.
     + by move => y' ys; case: ifP => // _ _; apply asym; rewrite H1.
 Qed.
 
+End mergesort.
+
 (*
 permutation の証明
 *)
-Inductive permutation : seq A -> seq A -> Prop :=
-  | perm_id    : forall xs, permutation xs xs
-  | perm_swap  : forall x x' xs, permutation (x :: x' :: xs) (x' :: x :: xs)
-  | perm_cons  : forall x xs ys,
-                 permutation xs ys -> permutation (x :: xs) (x :: ys)
-  | perm_trans : forall xs ys zs,
-                 permutation xs ys -> permutation ys zs -> permutation xs zs.
-
-Hint Constructors permutation.
-
-Lemma perm_cat xsl xsr ysl ysr :
-  permutation xsl ysl -> permutation xsr ysr ->
-  permutation (xsl ++ xsr) (ysl ++ ysr).
-Proof.
-  move => H H0; apply perm_trans with (xsl ++ ysr).
-  - by elim: xsl {H} => //= x xsl H; constructor.
-  - move: xsl ysl H {xsr H0}.
-    refine (permutation_ind _ _ _ _) => //=; auto.
-    by move => xs ys zs H H0 H1 H2; apply perm_trans with (ys ++ ysr).
-Qed.
-
-Lemma perm_sym xs ys : permutation xs ys -> permutation ys xs.
-  move: xs ys; refine (permutation_ind _ _ _ _) => //=.
-  - by move => x xs ys _ H; constructor.
-  - by move => xs ys zs _ H _ H0; apply perm_trans with ys.
-Qed.
-
-Lemma perm_catC xs ys : permutation (xs ++ ys) (ys ++ xs).
-Proof.
-  elim: xs ys => //=; first by move => ys; rewrite cats0.
-  move => x xs IHx; elim; first by rewrite cats0.
-  move => /= y ys IHy.
-  apply perm_trans with (x :: y :: ys ++ xs);
-    first by constructor; apply (IHx (y :: ys)).
-  apply perm_trans with (y :: x :: xs ++ ys); last by constructor.
-  apply perm_trans with (x :: y :: xs ++ ys); do ?constructor.
-  apply perm_sym, IHx.
-Qed.
-
-Theorem mergesort_perm (xs : seq A) : permutation xs (mergesort xs).
+Theorem mergesort_perm (A : eqType) (cmp : A -> A -> bool) (xs : seq A) :
+  perm_eq xs (mergesort cmp xs).
 Proof.
   rewrite /mergesort.
   set xs' := map _ _.
@@ -146,21 +110,17 @@ Proof.
   move => x xs; rewrite /size ltnS -/size; case: xs => //;
     first by rewrite /= cats0.
   move => x' xs H.
-  apply perm_trans with (flatten (merge_pair (x :: x' :: xs)));
+  apply perm_eq_trans with (flatten (merge_pair cmp (x :: x' :: xs)));
     last by apply IH => /=; apply leq_ltn_trans with (size xs) => //;
             apply merge_pair_decreasing.
-  elim/list2_rec: {n x x' xs IH H} [:: _, _ & _] =>
-    //= x x' xs; rewrite catA; apply perm_cat.
+  elim/list2_rec: {n x x' xs IH H} [:: _, _ & _] => //= x x' xs; rewrite catA.
+  rewrite -(perm_cat2l (x ++ x')); move/perm_eq_trans; apply; rewrite perm_cat2r.
   elim: x x' {xs} => // x xs IHx; elim; first by rewrite cats0.
   move => y ys IHy /=; case: ifP => _.
-  - constructor; apply IHx.
-  - apply perm_trans with (y :: ys ++ x :: xs);
-      first by apply (perm_catC (x :: xs)).
-    constructor; apply perm_trans with (x :: xs ++ ys);
-      [apply perm_catC | apply IHy].
+  - rewrite (perm_cat2l [:: x]); apply IHx.
+  - move/perm_eqlP/perm_eq_trans: (perm_catCA (x :: xs) [:: y] ys); apply => /=.
+    rewrite (perm_cat2l [:: y]); apply IHy.
 Qed.
-
-End mergesort.
 
 Section mergesort2.
 
