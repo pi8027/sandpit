@@ -60,8 +60,7 @@ sorted の証明
 Fixpoint sorted' x xs :=
   if xs is x' :: xs then cmp x x' && sorted' x' xs else true.
 
-Definition sorted xs :=
-  if xs is x :: xs then sorted' x xs else true.
+Definition sorted xs := if xs is x :: xs then sorted' x xs else true.
 
 Lemma sortedE x xs : sorted (x :: xs) =
   (if xs is x' :: _ then cmp x x' else true) && sorted xs.
@@ -114,12 +113,11 @@ Proof.
     last by apply IH => /=; apply leq_ltn_trans with (size xs) => //;
             apply merge_pair_decreasing.
   elim/list2_rec: {n x x' xs IH H} [:: _, _ & _] => //= x x' xs; rewrite catA.
-  rewrite -(perm_cat2l (x ++ x')); move/perm_eq_trans; apply; rewrite perm_cat2r.
+  rewrite -(perm_cat2l (x ++ x')); move/perm_eqlP => ->; rewrite perm_cat2r.
   elim: x x' {xs} => // x xs IHx; elim; first by rewrite cats0.
   move => y ys IHy /=; case: ifP => _.
   - rewrite (perm_cat2l [:: x]); apply IHx.
-  - move/perm_eqlP/perm_eq_trans: (perm_catCA (x :: xs) [:: y] ys); apply => /=.
-    rewrite (perm_cat2l [:: y]); apply IHy.
+  - rewrite (perm_catCA (x :: xs) [:: y] ys) /= (perm_cat2l [:: y]); apply IHy.
 Qed.
 
 Section mergesort2.
