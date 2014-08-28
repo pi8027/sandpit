@@ -128,22 +128,21 @@ Proof.
     by f_equal; apply eq_big => // var _; rewrite ffunE mulrA.
 Qed.
 
-(*
-Require Import Classical.
-
 Lemma nf_correctness v (f : formula v) i :
-  formula_semantics f i <-> nformula_semantics (normal_f f) i.
+  (forall v (f : nformula v) i,
+    let P := nformula_semantics f i in ~ ~ P -> P) ->
+  (formula_semantics f i <-> nformula_semantics (normal_f f) i).
 Proof.
-  move: v f i; refine (formula_ind _ _ _ _ _ _) => /=.
+  move => dne; move: v f i; refine (formula_ind _ _ _ _ _ _) => /=.
   - move => v f IH i; split => H.
     + by case => n; apply; apply IH, H.
-    + by move => n; apply IH, NNPP => H0; apply H; exists n.
+    + by move => n; apply IH, dne => H0; apply H; exists n.
   - by move => v f IH i; split; case => n H; exists n; apply IH.
   - by move => v f IH i; split => H H0; apply H, IH.
   - move => v f IHf f' IHf' i; split.
     + by case => H H0 []; apply; [apply IHf | apply IHf'].
     + by move => H; split; [apply IHf | apply IHf'];
-        apply NNPP => H'; apply H; [left | right].
+        apply dne => H'; apply H; [left | right].
   - by move => v f IHf f' IHf' i; split;
       (case => H; [left; apply IHf | right; apply IHf']).
   - move => v t t' i; rewrite -lez_nat !nt_correctness.
@@ -154,7 +153,6 @@ Proof.
     suff ->: x = y by []; rewrite {}/x {}/y.
     by apply eq_big => // var _; rewrite ffunE mulrDl mulNr.
 Qed.
-*)
 
 (* automata construction *)
 
@@ -220,8 +218,3 @@ Canonical range_finType := Eval hnf in FinType range range_finMixin.
 Canonical range_subFinType := Eval hnf in [subFinType of range].
 
 End Range.
-
-Print regular.
-
-Print subFinType.
-
