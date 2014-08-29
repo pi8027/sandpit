@@ -247,12 +247,17 @@ Lemma afdfa_trans_proof (q : range state_lb state_ub) (ch : bool ^ v) :
 Proof.
   case: q => /= q /andP [].
   rewrite /state_lb /state_ub !lez_divRL // => H H0.
-  apply/andP; split;
+  by apply/andP; split;
     [case: minrP H {H0} => H H0 |
      case: maxrP H0 {H} => H H0; apply lez_divL => //];
-    rewrite mulz2 ler_add //;
-    [apply (ler_trans H) | | apply: (ler_trans _ H) |]; rewrite ler_opp2.
-Admitted.
+  rewrite mulz2 ler_add //;
+    [apply (ler_trans H) | | apply: (ler_trans _ H) |];
+  rewrite ler_opp2 big_mkcond [X in (_ <= X)%R]big_mkcond /=;
+  apply (big_ind2 (R1 := int) (R2 := int) (fun x y => is_true (x <= y)%R)
+    (lerr 0) (@ler_add _)) => i _;
+  do 2 case: ifP => //; [| | move => _ | move => _] => /negbT;
+    rewrite -ltrNge ltr_def => /andP [].
+Qed.
 
 Definition dfa_of_af (n : int) : dfa [finType of bool ^ v] :=
   {| dfa_state := [finType of range state_lb state_ub];
