@@ -4,7 +4,7 @@
 
 Require Import
   ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun div
-  bigop ssralg ssrnum ssrint dfa_to_re regexp automata.
+  bigop ssralg ssrnum ssrint intdiv dfa_to_re regexp automata.
 Import GRing.Theory Num.Theory.
 
 Set Implicit Arguments.
@@ -158,7 +158,7 @@ Qed.
 
 Section Range.
 
-Variable (i k : int).
+Variables (i k : int).
 
 Inductive range : predArgType := Range j of ((i <= j) && (j <= k))%R.
 
@@ -218,3 +218,51 @@ Canonical range_finType := Eval hnf in FinType range range_finMixin.
 Canonical range_subFinType := Eval hnf in [subFinType of range].
 
 End Range.
+
+Lemma lez_divL d m n : (0 < d -> m <= n * d -> m %/ d <= n)%Z%R.
+Proof.
+  move => H H0; rewrite -(ler_pmul2r H); apply: (ler_trans _ H0).
+  rewrite -[X in (X <= _)%R]addr0 {2}(divz_eq m d) ler_add2l.
+  by apply modz_ge0, lt0r_neq0.
+Qed.
+
+Section dfa_of_atomic_formula.
+
+Variables (v : nat) (c : int ^ v).
+
+Section def.
+
+Variable (n : int).
+
+Definition state_lb : int := Num.min n (- \sum_(i : 'I_v | 0 <= c i) c i)%R.
+Definition state_ub : int := Num.max n (- \sum_(i : 'I_v | c i <= 0) c i)%R.
+
+Lemma afdfa_s_proof : (state_lb <= n <= state_ub)%R.
+Proof. by rewrite /state_lb /state_ub ler_minl ler_maxr lerr. Qed.
+
+Lemma afdfa_trans_proof (q : range state_lb state_ub) (ch : bool ^ v) :
+  (state_lb <=
+   ((int_of_range q - \sum_(i : 'I_v | ch i) c i) %/ 2)%Z <=
+   state_ub)%R.
+Proof.
+  case: q => /= q /andP [].
+  rewrite /state_lb /state_ub !lez_divRL // => H H0.
+  apply/andP; split;
+    [case: minrP H {H0} => H H0 |
+     case: maxrP H0 {H} => H H0; apply lez_divL => //];
+    rewrite mulz2 ler_add //;
+    [apply (ler_trans H) | | apply: (ler_trans _ H) |]; rewrite ler_opp2.
+Admitted.
+
+Definition dfa_of_af (n : int) : dfa [finType of bool ^ v] :=
+  {| dfa_state := [finType of range state_lb state_ub];
+     dfa_s := Range afdfa_s_proof;
+     dfa_fin q := (0 <= q)%R;
+     dfa_trans q ch := Range (afdfa_trans_proof q ch)
+  |}.
+
+End def.
+
+
+
+End dfa_of_atomic_formula.
