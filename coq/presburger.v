@@ -292,6 +292,15 @@ Fixpoint assign_of_word (w : seq (bool ^ fvs)) : nat ^ fvs :=
     | ch :: w => [ffun i => ch i + assign_of_word w i * 2]
   end.
 
+Lemma cancel_woa_aow : cancel word_of_assign assign_of_word.
+Proof.
+  rewrite /cancel.
+  apply (well_founded_induction
+    (well_founded_ltof (fun (a : nat ^ fvs) => \sum_(i < fvs) a i))) =>
+    assign IH.
+  rewrite /word_of_assign /Fix -Fix_F_eq.
+Admitted.
+
 Section dfa_of_atomic_formula_definition.
 
 Variable (n : int).
@@ -312,11 +321,9 @@ Proof.
   by apply/andP; split;
     [case: minrP H {H0} => H H0 |
      case: maxrP H0 {H} => H H0; apply lez_divL => //];
-  rewrite mulz2 ler_add //;
-    [apply (ler_trans H) | | apply: (ler_trans _ H) |];
+  rewrite mulz2 ler_add //; [apply (ler_trans H) | | apply: (ler_trans _ H) |];
   rewrite ler_opp2 big_mkcond [X in (_ <= X)%R]big_mkcond /=;
-  apply (big_ind2 (R1 := int) (R2 := int) (fun x y => is_true (x <= y)%R)
-    (lerr 0) (@ler_add _)) => i _;
+  apply (big_ind2 (fun (x y : int) => (x <= y)%R) (lerr 0) (@ler_add _)) => i _;
   do 2 case: ifP => //; [| | move => _ | move => _] => /negbT;
     rewrite -ltrNge ltr_def => /andP [].
 Qed.
@@ -335,6 +342,29 @@ Lemma af_validP (n : int) :
     (forall assign, nformula_semantics (nf_atomic cs n) assign)
     (dfa_equiv (dfa_of_af n) (dfa_all _)).
 Proof.
+  apply: (iffP idP) => /=;
+    [move/dfa_equiv_correct => H assign |
+     move => H; apply/dfa_equiv_correct => assign].
+  - rewrite -(cancel_woa_aow assign);
+      move: (word_of_assign _) => {assign} assign.
+    have {H} : assign \in dfa_lang (dfa_of_af n);
+      first rewrite H; rewrite delta_accept /= unfold_in //.
+    elim: assign {2 3 10 11}n (afdfa_s_proof n) =>
+      /= [n' H | ch assign IH n' H].
+    + have -> //: (\sum_(m < fvs) cs m * [ffun => 0%N] m = 0)%R.
+      by apply big_rec => //= i x _ ->; rewrite ffunE mulr0.
+    + rewrite delta_cons /= => /IH; rewrite lez_divRL // ler_subr_addr.
+      set x := (_ + _)%R; set y := BigOp.bigop _ _ _.
+      have -> // : x = y; rewrite {}/x {}/y.
+      rewrite (big_morph (fun x => (x * (2 : int))%R) (id1 := 0%R) (op1 := +%R))
+              /= ?mul0r //; last by move => /= x y; rewrite mulrDl.
+      rewrite (big_mkcond ch) -big_split /=.
+      apply big_rec2 => // i x y _ ->; rewrite ffunE.
+      have ->: ((if ch i then cs i else 0) = cs i * ch i)%R by
+        case: (ch i); rewrite ?mulr1 ?mulr0.
+      by rewrite -mulrA -mulrDr addnC PoszD PoszM.
+  - rewrite !delta_accept /= !unfold_in -/(is_true _).
+    admit.
 Abort.
 
 End automata_construction.
