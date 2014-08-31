@@ -12,20 +12,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Theorem well_founded_ltof (A : Type) (f : A -> nat) :
-  well_founded (fun n m => f n < f m).
-Proof.
-  move => x.
-  move: {2}(f x) (leqnn (f x)) => n.
-  elim: n x => [ | n IHn ] x H; constructor => y H0.
-  - apply False_ind, notF.
-    rewrite -(ltn0 (f y)).
-    apply (leq_trans H0 H).
-  - apply IHn.
-    rewrite -ltnS.
-    apply (leq_trans H0 H).
-Defined.
-
 (* extensions for fintype *)
 
 Section Range.
@@ -247,6 +233,24 @@ Proof.
   by apply modz_ge0, lt0r_neq0.
 Qed.
 
+Lemma maxn_divr m n d : 0 < d -> maxn (m %/ d) (n %/ d) = maxn m n %/ d.
+Proof.
+  move => H.
+  have Hbase x y: x < d -> maxn x y %/ d = y %/ d.
+    case: (leqP x y); first by move/maxn_idPr => ->.
+    by move => H0 H1; rewrite (maxn_idPl (ltnW H0)) !divn_small //;
+      apply (leq_ltn_trans (ltnW H0)).
+  rewrite {2}(divn_eq m d) {2}(divn_eq n d).
+  elim: (m %/ d) (n %/ d).
+  - by move => n'; rewrite mul0n add0n max0n Hbase ?ltn_pmod //
+                           divnMDl // divn_small // ltn_pmod.
+  - move => n' IH [| m'].
+    + by rewrite mul0n add0n maxn0 maxnC Hbase ?ltn_pmod //
+                 divnMDl // divn_small // ltn_pmod.
+    + by rewrite maxnSS !mulSn -!addnA -addn_maxr
+                 -{1}(mul1n d) divnMDl // add1n -IH.
+Qed.
+
 Definition dfa_all A : dfa A :=
   {| dfa_s := tt; dfa_fin x := true; dfa_trans x a := tt |}.
 
@@ -257,34 +261,18 @@ Section automata_construction.
 
 Variables (fvs : nat) (cs : int ^ fvs).
 
-Lemma word_of_assign_decreasing (a : nat ^ fvs) :
-  a != [ffun=> 0] ->
-  \sum_(i < fvs) [ffun i0 => a i0 %/ 2] i < \sum_(i < fvs) a i.
-Proof.
-  move => H; rewrite ltnNge; apply/negP => H0; move/eqP: H;
-    apply; apply/ffunP => /= i; rewrite ffunE; apply/eqP.
-  have/(leq_trans H0) {H0} :
-    \sum_(i < fvs) [ffun i' => a i' %/ 2] i <= (\sum_(i < fvs) a i) %/ 2 by
-    apply (big_rec2 (fun x y => is_true (x <= y %/ 2))) =>
-      //= {i} i x y _; rewrite ffunE !leq_divRL // mulnDl;
-      apply leq_add, leq_trunc_div.
-  rewrite leq_divRL // => H.
-  have {H}: \sum_(i < fvs) a i == 0 by
-    case: (BigOp.bigop _ _ _) H => // n; rewrite leqNgt mulSn !ltnS leq_pmulr.
-  by apply contraTT => H; rewrite (bigID (eq_op^~ i)) /= big_pred1_eq;
-    case: (a i) H.
-Qed.
+Fixpoint word_of_assign' (n : nat) (assign : nat ^ fvs) : seq (bool ^ fvs) :=
+  match n with
+    | 0 => [::]
+    | n.+1 =>
+      if assign == [ffun => 0]
+        then [::]
+        else [ffun i => odd (assign i)] ::
+             word_of_assign' n [ffun i => assign i %/ 2]
+  end.
 
-Definition word_of_assign : nat ^ fvs -> seq (bool ^ fvs) :=
-  Fix
-    (well_founded_ltof (fun (a : nat ^ fvs) => \sum_(i < fvs) a i))
-    (fun _ => seq (bool ^ fvs))
-    (fun a IH =>
-      (if a == [ffun => 0] as x return (a == [ffun => 0]) = x -> _
-       then fun _ => [::]
-       else fun H => [ffun i => odd (a i)] ::
-                     IH _ (word_of_assign_decreasing (negbT H)))
-      (erefl (a == [ffun => 0]))).
+Definition word_of_assign (assign : nat ^ fvs) : seq (bool ^ fvs) :=
+  word_of_assign' (\max_(i < fvs) assign i) assign.
 
 Fixpoint assign_of_word (w : seq (bool ^ fvs)) : nat ^ fvs :=
   match w with
@@ -294,12 +282,24 @@ Fixpoint assign_of_word (w : seq (bool ^ fvs)) : nat ^ fvs :=
 
 Lemma cancel_woa_aow : cancel word_of_assign assign_of_word.
 Proof.
-  rewrite /cancel.
-  apply (well_founded_induction
-    (well_founded_ltof (fun (a : nat ^ fvs) => \sum_(i < fvs) a i))) =>
-    assign IH.
-  rewrite /word_of_assign /Fix -Fix_F_eq.
-Admitted.
+  rewrite /cancel /word_of_assign => assign.
+  set n := (\max_(i < fvs) assign i).
+  move: {2 3}n (leqnn n); rewrite {}/n => n; elim: n assign => //=.
+  - by move => assign H; apply/ffunP => /= i; rewrite ffunE; apply/eqP;
+      move: H; apply contraTT; rewrite (bigID (eq_op^~ i)) /= big_pred1_eq;
+      case: (assign i) => // n _; case: (BigOp.bigop _ _ _) => // m;
+      rewrite maxnSS.
+  - move => n IHn assign H; case: ifP => //=; first by move/eqP.
+    move => H0; apply/ffunP => /= i.
+    rewrite IHn; first by rewrite !ffunE -modn2 addnC -divn_eq.
+    clear cs i IHn H0.
+    have -> : \max_(i < fvs) [ffun i' => assign i' %/ 2] i =
+              (\max_(i < fvs) assign i) %/ 2 by
+      apply (big_rec2 (fun x y => x = y %/ 2)) => // i x y _ ->;
+        rewrite ffunE maxn_divr.
+    move: H; apply contraTT; rewrite -!ltnNge leq_divRL // => H.
+    by apply: (leq_trans _ H); rewrite mulSn !ltnS muln2 -addnn leq_addr.
+Qed.
 
 Section dfa_of_atomic_formula_definition.
 
