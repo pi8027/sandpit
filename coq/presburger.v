@@ -259,7 +259,7 @@ Proof. by elim: w q => /=. Qed.
 
 Section automata_construction.
 
-Variables (fvs : nat) (cs : int ^ fvs).
+Variables (fvs : nat).
 
 Fixpoint word_of_assign' (n : nat) (assign : nat ^ fvs) : seq (bool ^ fvs) :=
   match n with
@@ -292,7 +292,7 @@ Proof.
   - move => n IHn assign H; case: ifP => //=; first by move/eqP.
     move => H0; apply/ffunP => /= i.
     rewrite IHn; first by rewrite !ffunE -modn2 addnC -divn_eq.
-    clear cs i IHn H0.
+    clear i IHn H0.
     have -> : \max_(i < fvs) [ffun i' => assign i' %/ 2] i =
               (\max_(i < fvs) assign i) %/ 2 by
       apply (big_rec2 (fun x y => x = y %/ 2)) => // i x y _ ->;
@@ -301,9 +301,9 @@ Proof.
     by apply: (leq_trans _ H); rewrite mulSn !ltnS muln2 -addnn leq_addr.
 Qed.
 
-Section dfa_of_atomic_formula_definition.
+Section dfa_of_atomic_formula.
 
-Variable (n : int).
+Variable (cs : int ^ fvs) (n : int).
 
 Definition state_lb : int := Num.min n (- \sum_(i : 'I_fvs | 0 <= cs i) cs i)%R.
 Definition state_ub : int := Num.max n (- \sum_(i : 'I_fvs | cs i <= 0) cs i)%R.
@@ -335,14 +335,12 @@ Definition dfa_of_af : dfa [finType of bool ^ fvs] :=
      dfa_trans q ch := Range (afdfa_trans_proof q ch)
   |}.
 
-End dfa_of_atomic_formula_definition.
-
-Lemma afdfa_equiv (n : int) assign :
-  assign \in dfa_lang (dfa_of_af n) =
+Lemma afdfa_equiv assign :
+  assign \in dfa_lang dfa_of_af =
   (\sum_(m < fvs) cs m * (assign_of_word assign) m <= n)%R.
 Proof.
   rewrite delta_accept unfold_in /=.
-  elim: assign {2 3 10 11}n (afdfa_s_proof n) => /= [| ch assign IH] n' H.
+  elim: assign n afdfa_s_proof => /= [| ch assign IH] n' H.
   - have -> //: (\sum_(m < fvs) cs m * [ffun => 0%N] m = 0)%R.
     by apply big_rec => //= i x _ ->; rewrite ffunE mulr0.
   - rewrite delta_cons /= {}IH lez_divRL // ler_subr_addr.
@@ -354,5 +352,7 @@ Proof.
     by apply eq_bigr => i _; rewrite ffunE PoszD PoszM mulrDr mulrA addrC;
       case: (ch i); rewrite ?mulr1 ?mulr0.
 Qed.
+
+End dfa_of_atomic_formula.
 
 End automata_construction.
