@@ -337,37 +337,22 @@ Definition dfa_of_af : dfa [finType of bool ^ fvs] :=
 
 End dfa_of_atomic_formula_definition.
 
-Lemma af_validP (n : int) :
-  reflect
-    (forall assign, nformula_semantics (nf_atomic cs n) assign)
-    (dfa_equiv (dfa_of_af n) (dfa_all _)).
+Lemma afdfa_equiv (n : int) assign :
+  assign \in dfa_lang (dfa_of_af n) =
+  (\sum_(m < fvs) cs m * (assign_of_word assign) m <= n)%R.
 Proof.
-  suff: forall assign,
-    assign \in dfa_lang (dfa_of_af n) <->
-    (\sum_(m < fvs) cs m * (assign_of_word assign) m <= n)%R.
-    move => H; apply: (iffP idP) => /=;
-      [move/dfa_equiv_correct => H0 assign |
-       move => H0; apply/dfa_equiv_correct => assign].
-    - by rewrite -(cancel_woa_aow assign); apply H;
-        rewrite H0 delta_accept unfold_in.
-    - by apply esym; rewrite delta_accept unfold_in; apply esym, H, H0.
-  move => assign; rewrite delta_accept unfold_in /=.
-  elim: assign {2 3 10 11}n (afdfa_s_proof n) =>
-    /= [| ch assign IH] n' H.
+  rewrite delta_accept unfold_in /=.
+  elim: assign {2 3 10 11}n (afdfa_s_proof n) => /= [| ch assign IH] n' H.
   - have -> //: (\sum_(m < fvs) cs m * [ffun => 0%N] m = 0)%R.
     by apply big_rec => //= i x _ ->; rewrite ffunE mulr0.
-  - rewrite delta_cons /=.
-    apply (iff_trans (IH _ _)).
-    rewrite lez_divRL // ler_subr_addr.
-    set x := (_ + _)%R; set y := BigOp.bigop _ _ _.
-    have -> // : x = y; rewrite {}/x {}/y.
+  - rewrite delta_cons /= {}IH lez_divRL // ler_subr_addr.
+    set x := (_ + _)%R; set y := BigOp.bigop _ _ _;
+      have -> // : x = y; rewrite {}/x {}/y.
     rewrite (big_morph (fun x => (x * (2 : int))%R) (id1 := 0%R) (op1 := +%R))
             /= ?mul0r //; last by move => /= x y; rewrite mulrDl.
     rewrite (big_mkcond ch) -big_split /=.
-    apply big_rec2 => // i x y _ ->; rewrite ffunE.
-    have ->: ((if ch i then cs i else 0) = cs i * ch i)%R by
+    by apply eq_bigr => i _; rewrite ffunE PoszD PoszM mulrDr mulrA addrC;
       case: (ch i); rewrite ?mulr1 ?mulr0.
-    by rewrite -mulrA -mulrDr addnC PoszD PoszM.
 Qed.
 
 End automata_construction.
