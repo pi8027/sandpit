@@ -4,7 +4,7 @@
 
 Require Import
   ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun div
-  bigop ssralg ssrnum ssrint intdiv
+  path fingraph bigop ssralg ssrnum ssrint intdiv
   dfa_to_re regexp automata.
 Import GRing.Theory Num.Theory.
 
@@ -15,8 +15,7 @@ Import Prenex Implicits.
 (* extensions for fintype *)
 
 Section Range.
-
-Variables (i k : int).
+Variable (i k : int).
 
 Inductive range : predArgType := Range j of ((i <= j) && (j <= k))%R.
 
@@ -130,7 +129,7 @@ Fixpoint formula_semantics fvs (f : formula fvs) : nat ^ fvs -> Prop :=
       fun assign => formula_semantics f assign /\ formula_semantics f' assign
     | f_or f f' =>
       fun assign => formula_semantics f assign \/ formula_semantics f' assign
-    | f_leq t t' => fun assign =>  term_val t assign <= term_val t' assign
+    | f_leq t t' => fun assign => term_val t assign <= term_val t' assign
   end.
 
 Fixpoint nformula_semantics fvs (f : nformula fvs) : nat ^ fvs -> Prop :=
@@ -236,16 +235,16 @@ Qed.
 Lemma maxn_divr m n d : 0 < d -> maxn (m %/ d) (n %/ d) = maxn m n %/ d.
 Proof.
   move => H.
-  have Hbase x y: x < d -> maxn x y %/ d = y %/ d.
+  have BC x y: x < d -> maxn x y %/ d = y %/ d.
     case: (leqP x y); first by move/maxn_idPr => ->.
     by move => H0 H1; rewrite (maxn_idPl (ltnW H0)) !divn_small //;
       apply (leq_ltn_trans (ltnW H0)).
   rewrite {2}(divn_eq m d) {2}(divn_eq n d).
   elim: (m %/ d) (n %/ d).
-  - by move => n'; rewrite mul0n add0n max0n Hbase ?ltn_pmod //
+  - by move => n'; rewrite mul0n add0n max0n BC ?ltn_pmod //
                            divnMDl // divn_small // ltn_pmod.
   - move => n' IH [| m'].
-    + by rewrite mul0n add0n maxn0 maxnC Hbase ?ltn_pmod //
+    + by rewrite mul0n add0n maxn0 maxnC BC ?ltn_pmod //
                  divnMDl // divn_small // ltn_pmod.
     + by rewrite maxnSS !mulSn -!addnA -addn_maxr
                  -{1}(mul1n d) divnMDl // add1n -IH.
@@ -257,9 +256,8 @@ Definition dfa_all A : dfa A :=
 Lemma dfa_all_correct A q w : dfa_accept (dfa_all A) q w.
 Proof. by elim: w q => /=. Qed.
 
-Section automata_construction.
-
-Variables (fvs : nat).
+Section word_assign_conversion.
+Variable (fvs : nat).
 
 Fixpoint word_of_assign' (n : nat) (assign : nat ^ fvs) : seq (bool ^ fvs) :=
   match n with
@@ -301,8 +299,34 @@ Proof.
     by apply: (leq_trans _ H); rewrite mulSn !ltnS muln2 -addnn leq_addr.
 Qed.
 
-Section dfa_of_atomic_formula.
+End word_assign_conversion.
 
+Section word_cons.
+Variable (fvs : nat).
+
+Fixpoint word_cons a (w : seq (bool ^ fvs)) : seq (bool ^ fvs.+1) :=
+  match w with
+    | [::] => word_of_assign (cons_tuple a [ffun => 0])
+    | ch :: w' =>
+      cons_tuple (odd a) ch :: word_cons (a %/ 2) w'
+  end.
+
+Lemma word_cons_correctness a w :
+  cons_tuple a (assign_of_word w) = assign_of_word (word_cons a w).
+Proof.
+  elim: w a => //=; first by move => a; rewrite cancel_woa_aow.
+  move => ch w IH a; apply/ffunP => /= i.
+  rewrite ffunE -IH /cons_tuple !ffunE; case: i; case => /=.
+  - by rewrite -modn2 addnC -divn_eq.
+  - by move => i H; rewrite ffunE.
+Qed.
+
+End word_cons.
+
+Section automata_construction.
+Variable (fvs : nat).
+
+Section dfa_of_atomic_formula.
 Variable (cs : int ^ fvs) (n : int).
 
 Definition state_lb : int := Num.min n (- \sum_(i : 'I_fvs | 0 <= cs i) cs i)%R.
@@ -329,24 +353,24 @@ Proof.
 Qed.
 
 Definition dfa_of_af : dfa [finType of bool ^ fvs] :=
-  {| dfa_state := [finType of range state_lb state_ub];
-     dfa_s := Range afdfa_s_proof;
-     dfa_fin q := (0 <= q)%R;
+  {| dfa_state      := [finType of range state_lb state_ub];
+     dfa_s          := Range afdfa_s_proof;
+     dfa_fin q      := (0 <= q)%R;
      dfa_trans q ch := Range (afdfa_trans_proof q ch)
   |}.
 
-Lemma afdfa_equiv assign :
-  assign \in dfa_lang dfa_of_af =
-  (\sum_(m < fvs) cs m * (assign_of_word assign) m <= n)%R.
+Lemma afdfa_equiv w :
+  w \in dfa_lang dfa_of_af =
+  (\sum_(m < fvs) cs m * (assign_of_word w) m <= n)%R.
 Proof.
   rewrite delta_accept unfold_in /=.
-  elim: assign n afdfa_s_proof => /= [| ch assign IH] n' H.
+  elim: w n afdfa_s_proof => /= [| ch w IH] n' H.
   - have -> //: (\sum_(m < fvs) cs m * [ffun => 0%N] m = 0)%R.
     by apply big_rec => //= i x _ ->; rewrite ffunE mulr0.
   - rewrite delta_cons /= {}IH lez_divRL // ler_subr_addr.
     set x := (_ + _)%R; set y := BigOp.bigop _ _ _;
       have -> // : x = y; rewrite {}/x {}/y.
-    rewrite (big_morph (fun x => (x * (2 : int))%R) (id1 := 0%R) (op1 := +%R))
+    rewrite (big_morph (fun x : int => (x * 2)%R) (id1 := 0%R) (op1 := +%R))
             /= ?mul0r //; last by move => /= x y; rewrite mulrDl.
     rewrite (big_mkcond ch) -big_split /=.
     by apply eq_bigr => i _; rewrite ffunE PoszD PoszM mulrDr mulrA addrC;
@@ -354,5 +378,46 @@ Proof.
 Qed.
 
 End dfa_of_atomic_formula.
+
+Section nfa_of_exists.
+Variable (P : nat ^ fvs.+1 -> Prop) (A : dfa [finType of bool ^ fvs.+1]).
+Hypothesis (H_PA : forall w, reflect (P (assign_of_word w)) (w \in dfa_lang A)).
+
+Definition nfa_of_exists : nfa [finType of bool ^ fvs] :=
+  let nfa_trans' q ch q' :=
+    (dfa_trans A q (cons_tuple true ch) == q') ||
+    (dfa_trans A q (cons_tuple false ch) == q')
+  in
+  {| nfa_state         := A;
+     nfa_s             := dfa_s A;
+     nfa_fin q         :=
+       [exists (q' | q' \in dfa_fin A),
+        connect (nfa_trans' ^~ [ffun => false]) q q'];
+     nfa_trans q ch q' := nfa_trans' q ch q'
+  |}.
+
+Lemma exists_nfaP w :
+  reflect
+    (exists a, P (cons_tuple a (assign_of_word w)))
+    (w \in nfa_lang nfa_of_exists).
+Proof.
+  rewrite /nfa_lang unfold_in /=.
+  apply: (iffP idP).
+  - admit.
+  - case => a; rewrite word_cons_correctness => /H_PA /=; clear H_PA.
+    rewrite delta_accept /=.
+    elim: w a (dfa_s A) => //=.
+    + move => a s H; rewrite unfold_in; apply/existsP.
+      exists (delta s (word_of_assign (cons_tuple a [ffun=> 0]))).
+      rewrite H /= /delta; apply/connectP;
+        exists (dfa_run s (word_of_assign (cons_tuple a [ffun=> 0]))) => //.
+      admit.
+    + move => ch w IH a s.
+      rewrite delta_cons => /IH H {IH}.
+      apply/existsP; exists (dfa_trans A s (cons_tuple (odd a) ch)).
+      by rewrite H; case: (odd a); rewrite eqxx // orbT.
+Abort.
+
+End nfa_of_exists.
 
 End automata_construction.
