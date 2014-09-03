@@ -12,6 +12,38 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
+Lemma maxn_divr m n d : 0 < d -> maxn (m %/ d) (n %/ d) = maxn m n %/ d.
+Proof.
+  move => H.
+  have BC x y: x < d -> maxn x y %/ d = y %/ d.
+    case: (leqP x y); first by move/maxn_idPr => ->.
+    by move => H0 H1; rewrite (maxn_idPl (ltnW H0)) !divn_small //;
+      apply (leq_ltn_trans (ltnW H0)).
+  rewrite {2}(divn_eq m d) {2}(divn_eq n d).
+  elim: (m %/ d) (n %/ d).
+  - by move => n'; rewrite mul0n add0n max0n BC ?ltn_pmod //
+                           divnMDl // divn_small // ltn_pmod.
+  - move => n' IH [| m'].
+    + by rewrite mul0n add0n maxn0 maxnC BC ?ltn_pmod //
+                 divnMDl // divn_small // ltn_pmod.
+    + by rewrite maxnSS !mulSn -!addnA -addn_maxr
+                 -{1}(mul1n d) divnMDl // add1n -IH.
+Qed.
+
+Lemma max_div (I : finType) f d :
+  0 < d -> \max_(i : I) f i %/ d = (\max_(i : I) f i) %/ d.
+Proof.
+  move => H; apply (big_rec2 (fun x y => x = y %/ d)); first by rewrite div0n.
+  by move => i x y _ ->; rewrite maxn_divr.
+Qed.
+
+Lemma lez_divL d m n : (0 < d -> m <= n * d -> m %/ d <= n)%Z%R.
+Proof.
+  move => H H0; rewrite -(ler_pmul2r H); apply: (ler_trans _ H0).
+  rewrite -[X in (X <= _)%R]addr0 {2}(divz_eq m d) ler_add2l.
+  by apply modz_ge0, lt0r_neq0.
+Qed.
+
 (* extensions for fintype *)
 
 Section Range.
@@ -109,6 +141,21 @@ Definition cons_tuple (A : Type) n (h : A) (t : A ^ n) : A ^ n.+1 :=
      | Ordinal m.+1 Hm =>
        t (@Ordinal n m (eq_ind (m.+1 < n.+1) is_true Hm (m < n) (ltnS _ _)))
    end].
+
+Lemma cons_tuple_const (A : Type) n (x : A) :
+  cons_tuple (n := n) x [ffun => x] = [ffun => x].
+Proof.
+  by apply/ffunP => /= i; rewrite /cons_tuple !ffunE;
+    case: i => //; case => // i H; rewrite ffunE.
+Qed.
+
+Lemma cons_tuple_map (A B : Type) (f : A -> B) n (h : A) (t : 'I_n -> A) :
+  [ffun i => f ((cons_tuple h [ffun i => t i]) i)] =
+  cons_tuple (f h) [ffun i => f (t i)].
+Proof.
+  by apply/ffunP => /= i; rewrite /cons_tuple !ffunE;
+    case: i => //; case => // i H; rewrite !ffunE.
+Qed.
 
 Fixpoint term_val fvs (t : term fvs) (assign : nat ^ fvs) : nat :=
   match t with
@@ -225,31 +272,6 @@ Qed.
 
 (* automata construction *)
 
-Lemma lez_divL d m n : (0 < d -> m <= n * d -> m %/ d <= n)%Z%R.
-Proof.
-  move => H H0; rewrite -(ler_pmul2r H); apply: (ler_trans _ H0).
-  rewrite -[X in (X <= _)%R]addr0 {2}(divz_eq m d) ler_add2l.
-  by apply modz_ge0, lt0r_neq0.
-Qed.
-
-Lemma maxn_divr m n d : 0 < d -> maxn (m %/ d) (n %/ d) = maxn m n %/ d.
-Proof.
-  move => H.
-  have BC x y: x < d -> maxn x y %/ d = y %/ d.
-    case: (leqP x y); first by move/maxn_idPr => ->.
-    by move => H0 H1; rewrite (maxn_idPl (ltnW H0)) !divn_small //;
-      apply (leq_ltn_trans (ltnW H0)).
-  rewrite {2}(divn_eq m d) {2}(divn_eq n d).
-  elim: (m %/ d) (n %/ d).
-  - by move => n'; rewrite mul0n add0n max0n BC ?ltn_pmod //
-                           divnMDl // divn_small // ltn_pmod.
-  - move => n' IH [| m'].
-    + by rewrite mul0n add0n maxn0 maxnC BC ?ltn_pmod //
-                 divnMDl // divn_small // ltn_pmod.
-    + by rewrite maxnSS !mulSn -!addnA -addn_maxr
-                 -{1}(mul1n d) divnMDl // add1n -IH.
-Qed.
-
 Definition dfa_all A : dfa A :=
   {| dfa_s := tt; dfa_fin x := true; dfa_trans x a := tt |}.
 
@@ -278,6 +300,50 @@ Fixpoint assign_of_word (w : seq (bool ^ fvs)) : nat ^ fvs :=
     | ch :: w => [ffun i => ch i + assign_of_word w i * 2]
   end.
 
+Lemma max_div2_ffunE (assign : nat ^ fvs) :
+  \max_i [ffun i' => assign i' %/ 2] i = (\max_i assign i) %/ 2.
+Proof. by rewrite -max_div //; apply eq_bigr => /= i _; rewrite ffunE. Qed.
+
+Lemma word_of_assign'_eq n m (assign : nat ^ fvs) :
+  \max_(i < fvs) assign i <= n -> \max_(i < fvs) assign i <= m ->
+  word_of_assign' n assign = word_of_assign' m assign.
+Proof.
+  elim: n m assign => //=.
+  - move => [] //= m assign; case: ifP => // H0 /bigmax_leqP /= H _; move: H0.
+    have -> //: assign == [ffun => 0] by
+      apply/eqP/ffunP => i; rewrite ffunE; apply/eqP; rewrite -leqn0; apply H.
+  - move => n IH [| m] assign; do !case: ifP => //=.
+    + move => H0 _ /bigmax_leqP => H; move: H0.
+      have -> //: assign == [ffun => 0] by
+        apply/eqP/ffunP => i; rewrite ffunE; apply/eqP; rewrite -leqn0; apply H.
+    + by move => H _ H0 H1; f_equal; apply IH; rewrite max_div2_ffunE;
+        [move: H0 | move: H1]; case: (\max_i _) => // x;
+        rewrite ltnS; apply leq_trans; case: x => // x;
+        rewrite -add2n -{1}(mul1n 2) divnMDl // add1n ltn_divLR //;
+        apply leq_pmulr.
+Qed.
+
+Lemma word_of_assign_step assign :
+  word_of_assign assign =
+  if assign == [ffun => 0] then [::]
+    else [ffun i => odd (assign i)] :: word_of_assign [ffun i => assign i %/ 2].
+Proof.
+  rewrite /word_of_assign; case: ifP.
+  - move/eqP => ->.
+    have/bigmax_leqP: forall i : 'I_fvs, true -> [ffun => 0] i <= 0 by
+      move => i _; rewrite ffunE.
+    by case: (\max_i _).
+  - rewrite max_div2_ffunE.
+    case: {2 3 4}(\max_(i < fvs) assign i) (erefl (\max_(i < fvs) assign i)).
+    + move/eq_leq/bigmax_leqP => /= H0.
+      suff/ffunP -> : assign =1 [ffun => 0] by rewrite eqxx.
+      by move => /= i; apply/eqP; rewrite ffunE -leqn0; apply H0.
+    + move => /= n H0 ->; f_equal.
+      apply word_of_assign'_eq; rewrite max_div2_ffunE // H0 //.
+      by case: n {H0} => // n; rewrite
+        -add2n -(mul1n 2) divnMDl // add1n ltn_divLR //; apply leq_pmulr.
+Qed.
+
 Lemma cancel_woa_aow : cancel word_of_assign assign_of_word.
 Proof.
   rewrite /cancel /word_of_assign => assign.
@@ -290,14 +356,25 @@ Proof.
   - move => n IHn assign H; case: ifP => //=; first by move/eqP.
     move => H0; apply/ffunP => /= i.
     rewrite IHn; first by rewrite !ffunE -modn2 addnC -divn_eq.
-    clear i IHn H0.
-    have -> : \max_(i < fvs) [ffun i' => assign i' %/ 2] i =
-              (\max_(i < fvs) assign i) %/ 2 by
-      apply (big_rec2 (fun x y => x = y %/ 2)) => // i x y _ ->;
-        rewrite ffunE maxn_divr.
+    rewrite max_div2_ffunE => {i IHn H0}.
     move: H; apply contraTT; rewrite -!ltnNge leq_divRL // => H.
     by apply: (leq_trans _ H); rewrite mulSn !ltnS muln2 -addnn leq_addr.
 Qed.
+
+Lemma assign_of_word_cat (w1 w2 : seq (bool ^ fvs)) :
+  assign_of_word (w1 ++ w2) =
+  [ffun i => assign_of_word w1 i + 2 ^ (size w1) * assign_of_word w2 i].
+Proof.
+  apply/ffunP => i; rewrite ffunE.
+  elim: w1 => //=.
+  - by rewrite ffunE add0n expn0 mul1n.
+  - by move => ch w1 IH;
+      rewrite !ffunE IH mulnDl addnA mulnAC (mulnC (_ ^ _)) expnS.
+Qed.
+
+Lemma assign_of_word_nseq0 n :
+  assign_of_word (nseq n [ffun => false]) = [ffun => 0].
+Proof. by elim: n => //= n ->; apply/ffunP => i; rewrite !ffunE. Qed.
 
 End word_assign_conversion.
 
@@ -385,8 +462,7 @@ Hypothesis (H_PA : forall w, reflect (P (assign_of_word w)) (w \in dfa_lang A)).
 
 Definition nfa_of_exists : nfa [finType of bool ^ fvs] :=
   let nfa_trans' q ch q' :=
-    (dfa_trans A q (cons_tuple true ch) == q') ||
-    (dfa_trans A q (cons_tuple false ch) == q')
+    [exists b : bool, dfa_trans A q (cons_tuple b ch) == q']
   in
   {| nfa_state         := A;
      nfa_s             := dfa_s A;
@@ -403,20 +479,58 @@ Lemma exists_nfaP w :
 Proof.
   rewrite /nfa_lang unfold_in /=.
   apply: (iffP idP).
-  - admit.
-  - case => a; rewrite word_cons_correctness => /H_PA /=; clear H_PA.
+  - move => H.
+    suff: exists a n,
+      delta (dfa_s A) (word_cons a w ++ nseq n [ffun => false]) \in dfa_fin A.
+      move => [a [n]]; rewrite -delta_accept => /H_PA.
+      have ->: assign_of_word (word_cons a w ++ nseq n [ffun=> false]) =
+               assign_of_word (word_cons a w) by
+        apply/ffunP => /= i;
+          rewrite assign_of_word_cat assign_of_word_nseq0 !ffunE muln0 addn0.
+      by move => H0; exists a; rewrite word_cons_correctness.
+    elim: w (dfa_s A) H.
+    + move => /= s; rewrite unfold_in =>
+        /existsP [q] /andP [H] /connectP [qs H0 H1]; subst q.
+      elim: qs s H0 H.
+      * move => /= s _ H; exists 0.
+        rewrite cons_tuple_const /word_of_assign.
+        case: (eq_bigmax [ffun _ : 'I_fvs.+1 => 0]); first by rewrite card_ord.
+        by move => /= i ->; exists 0 => /=; rewrite cats0 ffunE /=.
+      * move => /= q' qs IH q /andP [] /existsP [] /= b /eqP H;
+          subst q' => /IH H /H {IH H} [a] [n H]; exists (a * 2 + b).
+        rewrite word_of_assign_step; case: ifP => /=.
+        - move/eqP/ffunP/(_ (Ordinal (ltn0Sn fvs)));
+            rewrite !ffunE addnC; case: b H => //= H; rewrite add0n =>
+            /(f_equal (divn^~2)) /=; rewrite mulnK // div0n => H0; subst a.
+          exists n.+1; move: H; rewrite !cons_tuple_const /= delta_cons.
+          rewrite /word_of_assign.
+          have -> //: \max_(i < fvs.+1) [ffun=> 0] i = 0 by
+            apply/eqP; rewrite -leqn0;
+              apply/bigmax_leqP => /= i _; rewrite ffunE.
+        - move => H0; exists n.
+          rewrite cons_tuple_map (cons_tuple_map (divn^~2)) odd_add odd_mul
+                  andbF /= oddb divnMDl // div0n divn_small ?addn0 //.
+          by case b.
+    + by move => /= ch w IH s /existsP [] q /andP [] /existsP [] /= b /eqP H;
+        subst q => /IH [] a [n H]; exists (a * 2 + b) => /=; exists n;
+        rewrite delta_cons odd_add odd_mul /= andbF /= divnMDl //
+                divn_small ?addn0 ?oddb //; case: b {H}.
+  - case => a; rewrite word_cons_correctness => /H_PA /=.
     rewrite delta_accept /=.
     elim: w a (dfa_s A) => //=.
-    + move => a s H; rewrite unfold_in; apply/existsP.
-      exists (delta s (word_of_assign (cons_tuple a [ffun=> 0]))).
-      rewrite H /= /delta; apply/connectP;
-        exists (dfa_run s (word_of_assign (cons_tuple a [ffun=> 0]))) => //.
-      admit.
+    + move => a s H0; rewrite unfold_in;
+        apply/existsP; eexists; apply/andP; split; first exact: H0;
+        apply/connectP; eexists; last reflexivity.
+      rewrite /word_of_assign.
+      move: (\max_i _) => n; elim: n a s {H0} => //= n IH a s.
+      case: ifP => //= _.
+      rewrite cons_tuple_map (cons_tuple_map (divn^~2)) /= IH andbT.
+      by apply/existsP; exists (odd a).
     + move => ch w IH a s.
-      rewrite delta_cons => /IH H {IH}.
-      apply/existsP; exists (dfa_trans A s (cons_tuple (odd a) ch)).
-      by rewrite H; case: (odd a); rewrite eqxx // orbT.
-Abort.
+      rewrite delta_cons => /IH H0.
+      apply/existsP; eexists; apply/andP; split; last exact: H0.
+      by apply/existsP; exists (odd a).
+Qed.
 
 End nfa_of_exists.
 
