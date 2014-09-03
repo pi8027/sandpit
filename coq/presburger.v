@@ -44,6 +44,29 @@ Proof.
   by apply modz_ge0, lt0r_neq0.
 Qed.
 
+Definition cons_tuple (A : Type) n (h : A) (t : A ^ n) : A ^ n.+1 :=
+  [ffun m =>
+   match m with
+     | Ordinal 0 Hm => h
+     | Ordinal m.+1 Hm =>
+       t (@Ordinal n m (eq_ind (m.+1 < n.+1) is_true Hm (m < n) (ltnS _ _)))
+   end].
+
+Lemma cons_tuple_const (A : Type) n (x : A) :
+  cons_tuple (n := n) x [ffun => x] = [ffun => x].
+Proof.
+  by apply/ffunP => /= i; rewrite /cons_tuple !ffunE;
+    case: i => //; case => // i H; rewrite ffunE.
+Qed.
+
+Lemma cons_tuple_map (A B : Type) (f : A -> B) n (h : A) (t : 'I_n -> A) :
+  [ffun i => f ((cons_tuple h [ffun i => t i]) i)] =
+  cons_tuple (f h) [ffun i => f (t i)].
+Proof.
+  by apply/ffunP => /= i; rewrite /cons_tuple !ffunE;
+    case: i => //; case => // i H; rewrite !ffunE.
+Qed.
+
 (* extensions for fintype *)
 
 Section Range.
@@ -133,29 +156,6 @@ Inductive nformula (v : nat) :=
   | nf_atomic of int ^ v & int.
 
 (* semantics of Presburger arithmetic  *)
-
-Definition cons_tuple (A : Type) n (h : A) (t : A ^ n) : A ^ n.+1 :=
-  [ffun m =>
-   match m with
-     | Ordinal 0 Hm => h
-     | Ordinal m.+1 Hm =>
-       t (@Ordinal n m (eq_ind (m.+1 < n.+1) is_true Hm (m < n) (ltnS _ _)))
-   end].
-
-Lemma cons_tuple_const (A : Type) n (x : A) :
-  cons_tuple (n := n) x [ffun => x] = [ffun => x].
-Proof.
-  by apply/ffunP => /= i; rewrite /cons_tuple !ffunE;
-    case: i => //; case => // i H; rewrite ffunE.
-Qed.
-
-Lemma cons_tuple_map (A B : Type) (f : A -> B) n (h : A) (t : 'I_n -> A) :
-  [ffun i => f ((cons_tuple h [ffun i => t i]) i)] =
-  cons_tuple (f h) [ffun i => f (t i)].
-Proof.
-  by apply/ffunP => /= i; rewrite /cons_tuple !ffunE;
-    case: i => //; case => // i H; rewrite !ffunE.
-Qed.
 
 Fixpoint term_val fvs (t : term fvs) (assign : nat ^ fvs) : nat :=
   match t with
@@ -506,14 +506,13 @@ Proof.
           have -> //: \max_(i < fvs.+1) [ffun=> 0] i = 0 by
             apply/eqP; rewrite -leqn0;
               apply/bigmax_leqP => /= i _; rewrite ffunE.
-        - move => H0; exists n.
-          rewrite cons_tuple_map (cons_tuple_map (divn^~2)) odd_add odd_mul
-                  andbF /= oddb divnMDl // div0n divn_small ?addn0 //.
-          by case b.
+        - by move => H0; exists n;
+            rewrite cons_tuple_map (cons_tuple_map (divn^~2)) odd_add odd_mul
+                    andbF oddb divnMDl // div0n divn_small ?addn0 //; case b.
     + by move => /= ch w IH s /existsP [] q /andP [] /existsP [] /= b /eqP H;
         subst q => /IH [] a [n H]; exists (a * 2 + b) => /=; exists n;
         rewrite delta_cons odd_add odd_mul /= andbF /= divnMDl //
-                divn_small ?addn0 ?oddb //; case: b {H}.
+                divn_small ?addn0 ?oddb //; case b.
   - case => a; rewrite word_cons_correctness => /H_PA /=.
     rewrite delta_accept /=.
     elim: w a (dfa_s A) => //=.
