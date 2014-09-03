@@ -218,7 +218,7 @@ Fixpoint normal_f fvs (f : formula fvs) : nformula fvs :=
       nf_atomic [ffun var => cs var - cs' var]%R (m - n)%R
   end.
 
-(* correctness proof *)
+(* correctness proof of normal form computation *)
 
 Lemma nt_correctness fvs (t : term fvs) assign :
   (term_val t assign : int) =
@@ -445,7 +445,7 @@ Proof.
   - have -> //: (\sum_(m < fvs) cs m * [ffun => 0%N] m = 0)%R.
     by apply big_rec => //= i x _ ->; rewrite ffunE mulr0.
   - rewrite delta_cons /= {}IH lez_divRL // ler_subr_addr.
-    set x := (_ + _)%R; set y := BigOp.bigop _ _ _;
+    set x := (_ + _)%R; set y := (\sum_m _)%R;
       have -> // : x = y; rewrite {}/x {}/y.
     rewrite (big_morph (fun x : int => (x * 2)%R) (id1 := 0%R) (op1 := +%R))
             /= ?mul0r //; last by move => /= x y; rewrite mulrDl.
