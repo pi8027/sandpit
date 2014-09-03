@@ -499,11 +499,10 @@ Proof.
       * move => /= q' qs IH q /andP [] /existsP [] /= b /eqP H;
           subst q' => /IH H /H {IH H} [a] [n H]; exists (a * 2 + b).
         rewrite word_of_assign_step; case: ifP => /=.
-        - move/eqP/ffunP/(_ (Ordinal (ltn0Sn fvs)));
-            rewrite !ffunE addnC; case: b H => //= H; rewrite add0n =>
-            /(f_equal (divn^~2)) /=; rewrite mulnK // div0n => H0; subst a.
-          exists n.+1; move: H; rewrite !cons_tuple_const /= delta_cons.
-          rewrite /word_of_assign.
+        - move/eqP/ffunP/(_ (Ordinal (ltn0Sn fvs))); rewrite !ffunE addnC;
+            case: b H => //= H; rewrite add0n => /(f_equal (divn^~2)) /=;
+            rewrite mulnK // div0n => H0; subst a; exists n.+1; move: H;
+            rewrite !cons_tuple_const /= delta_cons /word_of_assign.
           have -> //: \max_(i < fvs.+1) [ffun=> 0] i = 0 by
             apply/eqP; rewrite -leqn0;
               apply/bigmax_leqP => /= i _; rewrite ffunE.
