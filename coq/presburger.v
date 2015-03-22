@@ -287,12 +287,6 @@ Qed.
 
 (* automata construction *)
 
-Definition dfa_all A : dfa A :=
-  {| dfa_s := tt; dfa_fin x := true; dfa_trans x a := tt |}.
-
-Lemma dfa_all_correct A q w : dfa_accept (dfa_all A) q w.
-Proof. by elim: w q => /=. Qed.
-
 Section word_assign_conversion.
 Variable (fvs : nat).
 
@@ -414,8 +408,6 @@ Proof.
 Qed.
 
 End word_cons.
-
-Section automata_construction.
 
 Section dfa_of_atomic_formula.
 Variable (fvs : nat).
@@ -570,4 +562,14 @@ Proof.
   - move => fvs t n w; rewrite afdfa_equiv; apply idP.
 Qed.
 
-End automata_construction.
+Lemma presburger_arithmetic_dec fvs (f : formula fvs) assign :
+  reflect (interpret_formula f assign)
+          (word_of_assign assign \in dfa_lang (dfa_of_nformula (normal_f f))).
+Proof.
+  have dec_dne P : decidable P -> ~ ~ P -> P by case.
+  apply (iffP (dfa_of_nformula_correct _ _)); rewrite cancel_woa_aow;
+    apply nf_correct => fvs' f'  assign' /=;
+    apply dec_dne,
+          decP with (word_of_assign assign' \in dfa_lang (dfa_of_nformula f'));
+    rewrite -{1}(cancel_woa_aow assign'); apply dfa_of_nformula_correct.
+Qed.
