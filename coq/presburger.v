@@ -10,7 +10,7 @@ Import GRing.Theory Num.Theory.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
-Import Prenex Implicits.
+Unset Printing Implicit Defensive.
 
 Lemma maxn_divr m n d : 0 < d -> maxn (m %/ d) (n %/ d) = maxn m n %/ d.
 Proof.
@@ -145,17 +145,19 @@ Inductive formula (v : nat) :=
   | f_neg     of formula v
   | f_and     of formula v & formula v
   | f_or      of formula v & formula v
-  | f_leq     of term v & term v.
+  | f_leq     of term v & term v
+  | f_lt      of term v & term v.
 
 (* normal form of Prethburger formula *)
 
 Inductive nformula (v : nat) :=
   | nf_exists of nformula v.+1
   | nf_neg    of nformula v
+  | nf_and    of nformula v & nformula v
   | nf_or     of nformula v & nformula v
   | nf_atomic of int ^ v & int.
 
-(* semantics of Presburger arithmetic  *)
+(* interpretation of Presburger arithmetic  *)
 
 Fixpoint term_val fvs (t : term fvs) (assign : nat ^ fvs) : nat :=
   match t with
@@ -165,27 +167,30 @@ Fixpoint term_val fvs (t : term fvs) (assign : nat ^ fvs) : nat :=
     | t_mulc n t => n * term_val t assign
   end.
 
-Fixpoint formula_semantics fvs (f : formula fvs) : nat ^ fvs -> Prop :=
+Fixpoint interpret_formula fvs (f : formula fvs) : nat ^ fvs -> Prop :=
   match f with
     | f_all f =>
-      fun assign => forall n : nat, formula_semantics f (cons_tuple n assign)
+      fun assign => forall n : nat, interpret_formula f (cons_tuple n assign)
     | f_exists f =>
-      fun assign => exists n : nat, formula_semantics f (cons_tuple n assign)
-    | f_neg f => fun assign => ~ formula_semantics f assign
+      fun assign => exists n : nat, interpret_formula f (cons_tuple n assign)
+    | f_neg f => fun assign => ~ interpret_formula f assign
     | f_and f f' =>
-      fun assign => formula_semantics f assign /\ formula_semantics f' assign
+      fun assign => interpret_formula f assign /\ interpret_formula f' assign
     | f_or f f' =>
-      fun assign => formula_semantics f assign \/ formula_semantics f' assign
+      fun assign => interpret_formula f assign \/ interpret_formula f' assign
     | f_leq t t' => fun assign => term_val t assign <= term_val t' assign
+    | f_lt t t' => fun assign => term_val t assign < term_val t' assign
   end.
 
-Fixpoint nformula_semantics fvs (f : nformula fvs) : nat ^ fvs -> Prop :=
+Fixpoint interpret_nformula fvs (f : nformula fvs) : nat ^ fvs -> Prop :=
   match f with
     | nf_exists f =>
-      fun assign => exists n : nat, nformula_semantics f (cons_tuple n assign)
-    | nf_neg f => fun assign => ~ nformula_semantics f assign
+      fun assign => exists n : nat, interpret_nformula f (cons_tuple n assign)
+    | nf_neg f => fun assign => ~ interpret_nformula f assign
+    | nf_and f f' =>
+      fun assign => interpret_nformula f assign /\ interpret_nformula f' assign
     | nf_or f f' =>
-      fun assign => nformula_semantics f assign \/ nformula_semantics f' assign
+      fun assign => interpret_nformula f assign \/ interpret_nformula f' assign
     | nf_atomic t n => fun assign => (\sum_(m < fvs) t m * assign m <= n)%R
   end.
 
@@ -210,17 +215,21 @@ Fixpoint normal_f fvs (f : formula fvs) : nformula fvs :=
     | f_all f => nf_neg (nf_exists (nf_neg (normal_f f)))
     | f_exists f => nf_exists (normal_f f)
     | f_neg f => nf_neg (normal_f f)
-    | f_and f f' => nf_neg (nf_or (nf_neg (normal_f f)) (nf_neg (normal_f f')))
+    | f_and f f' => nf_and (normal_f f) (normal_f f')
     | f_or f f' => nf_or (normal_f f) (normal_f f')
     | f_leq t t' =>
       let: (cs, n) := normal_t t in
       let: (cs', m) := normal_t t' in
       nf_atomic [ffun var => cs var - cs' var]%R (m - n)%R
+    | f_lt t t' =>
+      let: (cs, n) := normal_t t in
+      let: (cs', m) := normal_t t' in
+      nf_atomic [ffun var => cs var - cs' var]%R (m - n - 1)%R
   end.
 
 (* correctness proof of normal form computation *)
 
-Lemma nt_correctness fvs (t : term fvs) assign :
+Lemma nt_correct fvs (t : term fvs) assign :
   (term_val t assign : int) =
   (let (c, n) := normal_t t in \sum_(m < fvs) c m * assign m + n)%R.
 Proof.
@@ -244,30 +253,36 @@ Proof.
     by f_equal; apply eq_big => // var _; rewrite ffunE mulrA.
 Qed.
 
-Lemma nf_correctness fvs (f : formula fvs) assign :
+Lemma nf_correct fvs (f : formula fvs) assign :
   (forall fvs (f : nformula fvs) assign,
-    let P := nformula_semantics f assign in ~ ~ P -> P) ->
-  (formula_semantics f assign <-> nformula_semantics (normal_f f) assign).
+    let P := interpret_nformula f assign in ~ ~ P -> P) ->
+  (interpret_formula f assign <-> interpret_nformula (normal_f f) assign).
 Proof.
-  move => dne; move: fvs f assign; refine (formula_ind _ _ _ _ _ _) => /=.
+  have Hbigop fvs' (a : nat ^ fvs') (cs cs' : int ^ fvs') :
+      (\sum_(m0 < fvs') cs' m0 * a m0 - \sum_(m0 < fvs') cs m0 * a m0)%R
+    = (\sum_(m0 < fvs') [ffun var => cs' var - cs var] m0 * a m0)%R.
+    rewrite (@big_morph _ _ -%R%R 0%R _ 0%R _ (@opprD _))
+            ?oppr0 // -big_split /=.
+    set x := BigOp.bigop _ _ _; set y := BigOp.bigop _ _ _.
+    suff ->: x = y by []; rewrite {}/x {}/y.
+    by apply eq_big => // var _; rewrite ffunE mulrDl mulNr.
+  move => dne; move: fvs f assign; refine (formula_ind _ _ _ _ _ _ _) => /=.
   - move => fvs f IH assign; split => H.
     + by case => a; apply; apply IH, H.
     + by move => a; apply IH, dne => H0; apply H; exists a.
   - by move => fvs f IH assign; split; case => a H; exists a; apply IH.
   - by move => fvs f IH assign; split => H H0; apply H, IH.
-  - move => fvs f IHf f' IHf' assign; split.
-    + by case => H H0 []; apply; [apply IHf | apply IHf'].
-    + by move => H; split; [apply IHf | apply IHf'];
-        apply dne => H'; apply H; [left | right].
+  - by move => fvs f IHf f' IHf' assign; split;
+      case => H H0; (split; [apply IHf | apply IHf']).
   - by move => fvs f IHf f' IHf' assign; split;
       (case => H; [left; apply IHf | right; apply IHf']).
-  - move => fvs t t' assign; rewrite -lez_nat !nt_correctness.
+  - move => fvs t t' assign; rewrite -lez_nat !nt_correct.
     case_eq (normal_t t); case_eq (normal_t t') => /= cs n _ cs' m _.
-    rewrite -ler_subr_addr -addrA addrC -ler_subl_addr
-      (@big_morph _ _ -%R%R 0%R _ 0%R _ (@opprD _)) ?oppr0 // -big_split /=.
-    set x := BigOp.bigop _ _ _; set y := BigOp.bigop _ _ _.
-    suff ->: x = y by []; rewrite {}/x {}/y.
-    by apply eq_big => // var _; rewrite ffunE mulrDl mulNr.
+    by rewrite -ler_subr_addr -addrA addrC -ler_subl_addr Hbigop.
+  - move => fvs t t' assign; rewrite -ltz_nat !nt_correct.
+    case_eq (normal_t t); case_eq (normal_t t') => /= cs n _ cs' m _.
+    by rewrite ler_sub_addr lez_addr1 -ltr_subr_addr -addrA addrC -ltr_subl_addr
+               Hbigop.
 Qed.
 
 (* automata construction *)
@@ -401,9 +416,9 @@ Qed.
 End word_cons.
 
 Section automata_construction.
-Variable (fvs : nat).
 
 Section dfa_of_atomic_formula.
+Variable (fvs : nat).
 Variable (cs : int ^ fvs) (n : int).
 
 Definition state_lb : int := Num.min n (- \sum_(i : 'I_fvs | 0 <= cs i) cs i)%R.
@@ -457,6 +472,7 @@ Qed.
 End dfa_of_atomic_formula.
 
 Section nfa_of_exists.
+Variable (fvs : nat).
 Variable (P : nat ^ fvs.+1 -> Prop) (A : dfa [finType of bool ^ fvs.+1]).
 Hypothesis (H_PA : forall w, reflect (P (assign_of_word w)) (w \in dfa_lang A)).
 
@@ -473,9 +489,8 @@ Definition nfa_of_exists : nfa [finType of bool ^ fvs] :=
   |}.
 
 Lemma exists_nfaP w :
-  reflect
-    (exists a, P (cons_tuple a (assign_of_word w)))
-    (w \in nfa_lang nfa_of_exists).
+  reflect (exists a, P (cons_tuple a (assign_of_word w)))
+          (w \in nfa_lang nfa_of_exists).
 Proof.
   rewrite /nfa_lang unfold_in /=.
   apply: (iffP idP).
@@ -531,5 +546,28 @@ Proof.
 Qed.
 
 End nfa_of_exists.
+
+Fixpoint dfa_of_nformula fvs (f : nformula fvs) : dfa [finType of bool ^ fvs] :=
+  match f with
+    | nf_exists f' => nfa_to_dfa (nfa_of_exists (dfa_of_nformula f'))
+    | nf_neg f' => dfa_compl (dfa_of_nformula f')
+    | nf_and f1 f2 => dfa_op andb (dfa_of_nformula f1) (dfa_of_nformula f2)
+    | nf_or f1 f2 => dfa_op orb (dfa_of_nformula f1) (dfa_of_nformula f2)
+    | nf_atomic t n => dfa_of_af t n
+  end.
+
+Lemma dfa_of_nformula_correct fvs (f : nformula fvs) w :
+  reflect (interpret_nformula f (assign_of_word w))
+          (w \in dfa_lang (dfa_of_nformula f)).
+Proof.
+  move: fvs f w; refine (nformula_rect _ _ _ _ _) => /=.
+  - move => fvs f IH w; rewrite -nfa_to_dfa_correct; apply exists_nfaP, IH.
+  - by move => fvs f IH w; rewrite dfa_compl_correct; apply: (iffP idP) => /IH.
+  - move => fvs f1 IHf1 f2 IHf2 w; rewrite dfa_op_correct;
+      apply: (iffP andP); case => /IHf1 H /IHf2 H0; tauto.
+  - move => fvs f1 IHf1 f2 IHf2 w; rewrite dfa_op_correct;
+      apply: (iffP orP); (case; [move/IHf1 | move/IHf2]); tauto.
+  - move => fvs t n w; rewrite afdfa_equiv; apply idP.
+Qed.
 
 End automata_construction.
