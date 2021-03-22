@@ -22,18 +22,23 @@ Fixpoint merge_sort_push s stack :=
 Fixpoint merge_sort_pop s1 stack :=
   if stack is s2 :: stack' then merge_sort_pop (merge leT s2 s1) stack' else s1.
 
-Fixpoint merge_sort_rec (stack : seq (seq T)) (asc : bool) acc x s :=
+Fixpoint merge_sort_rec (stack : seq (seq T)) x s :=
   if s is y :: s then
-    if leT x y == asc then
-      merge_sort_rec stack asc (x :: acc) y s
-    else
-      let stack' := merge_sort_push (condrev asc (x :: acc)) stack in
-      merge_sort_rec stack' (~~ asc) [::] y s
+    merge_sort_rec' stack (leT x y) [:: x] y s
   else
-    merge_sort_pop (condrev asc (x :: acc)) stack.
+    merge_sort_pop [:: x] stack
+with
+merge_sort_rec' (stack : seq (seq T)) (mode : bool) acc x s :=
+  if s is y :: s then
+    if leT x y == mode then
+      merge_sort_rec' stack mode (x :: acc) y s
+    else
+      let stack' := merge_sort_push (condrev mode (x :: acc)) stack in
+      merge_sort_rec stack' y s
+  else
+    merge_sort_pop (condrev mode (x :: acc)) stack.
 
-Definition sort s :=
-  if s is x :: s then merge_sort_rec [::] true [::] x s else [::].
+Definition sort s := if s is x :: s then merge_sort_rec [::] x s else [::].
 
 End SortSeq.
 
